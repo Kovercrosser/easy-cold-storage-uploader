@@ -53,6 +53,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./dist/main
+          asset_path: ./dist/main.exe
           asset_name: glacier_windows_x64.exe
           asset_content_type: application/octet-stream
