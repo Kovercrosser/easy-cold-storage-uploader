@@ -56,19 +56,19 @@ def createVault(region):
 def chooseCompression():
     compressionTypeList = ["None", "gzip", "bzip2"]
     compressionTypeListWithDescription = ["None", "gzip   (default)", "bzip2  (higher compression -> smaller Filesize, slower)"]
-    result = forceUserInputFromList("Choose your Compression:",compressionTypeListWithDescription)
+    result = forceUserInputFromList("Choose your Compression:", compressionTypeListWithDescription)
     return compressionTypeList[result - 1]
 
 def chooseFileType():
     fileTypeList = ["None", "tar", "zip"]
     fileTypeListWithDescription = ["None  (Stores Files as they are)", "tar   (recommended)", "zip"]
-    result = forceUserInputFromList("Choose your File Type:",fileTypeListWithDescription)
+    result = forceUserInputFromList("Choose your File Type:", fileTypeListWithDescription)
     return fileTypeList[result - 1]
 
 def chooseEncryption():
     encryptionList = ["None", "AES", "RSA"]
     encryptionListWithDescription = ["None  (Stores Files unencrypted)", "AES   (recommended)", "RSA"]
-    result = forceUserInputFromList("Choose your Encryption:",encryptionListWithDescription)
+    result = forceUserInputFromList("Choose your Encryption:", encryptionListWithDescription)
     return encryptionList[result - 1]
 
 def setup():
@@ -107,12 +107,12 @@ def setup():
     choosenEncryption = chooseEncryption()
     clearConsole("Setup Glacier Backup")
     print(f"\nYou chose {choosenEncryption} as your Encryption.")
-  
+
     storeSettings("default", "region", region)
     storeSettings("default", "vault", choosenVault)
-    storeSettings("default","compression", choosenCompression)
-    storeSettings("default","filetype", choosenFileType)
-    storeSettings("default","encryption", choosenEncryption)
+    storeSettings("default", "compression", choosenCompression)
+    storeSettings("default", "filetype", choosenFileType)
+    storeSettings("default", "encryption", choosenEncryption)
     storeSettings("global", "setup", True)
     print("Your Configuration has been stored in the file ~/.glacier-backup/settings")
     print("Setup complete.")

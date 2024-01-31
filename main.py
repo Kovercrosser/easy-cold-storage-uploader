@@ -28,15 +28,16 @@ def guidedExecution():
 
         choice = input("\nEnter your choice: ")
 
-        if choice == "upload" or choice == "1":
+        # pylint: disable=no-else-raise
+        if choice in ("upload", "1"):
             raise NotImplementedError("Upload is not implemented yet.")
-        elif choice == "download" or choice == "2":
+        elif choice in ("download", "2"):
             raise NotImplementedError("Download is not implemented yet.")
-        elif choice == "delete" or choice == "3":
+        elif choice in ("delete", "3"):
             raise NotImplementedError("Delete is not implemented yet.")
-        elif choice == "list all files" or choice == "4":
+        elif choice in ("list all files", "4"):
             raise NotImplementedError("List all Files is not implemented yet.")
-        elif choice == "setup" or choice == "9":
+        elif choice in ("setup", "9"):
             setup()
         else:
             clearConsole()
@@ -75,6 +76,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n\nProgram terminated by user. Exiting...", flush=True)
         sys.exit(0)
-    except Exception as e:
-        print(f"Unexpected error: {e}")
+    except Exception as exception:
+        print(f"Unexpected error: {exception}")
         sys.exit(1)

@@ -14,8 +14,7 @@ def forceUserInputFromList(header: str, userOptions: list) -> int:
         choice = input("\nEnter your choice: ")
         if choice.isdigit() and 1 <= int(choice) <= len(userOptions):
             break
-        else:
-            print("Invalid input. Please try again.")
+        print("Invalid input. Please try again.")
     return int(choice)
 
 def forceUserInput(header: str, validOptions: list = None) -> str:
@@ -26,6 +25,5 @@ def forceUserInput(header: str, validOptions: list = None) -> str:
         choice = input("\nEnter your value: ")
         if (not validOptions or choice in validOptions) and choice != "":
             break
-        else:
-            print("Invalid input. Please try again.")
+        print("Invalid input. Please try again.")
     return choice

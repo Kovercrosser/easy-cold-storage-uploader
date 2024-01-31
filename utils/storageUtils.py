@@ -26,7 +26,7 @@ def storeSettings(profile, key, value):
     settingsJson[profile][key] = value
     settingsData = json.dumps(settingsJson)
 
-    with open(settingsFile, 'w',encoding='utf-8') as file:
+    with open(settingsFile, 'w', encoding='utf-8') as file:
         file.write(settingsData)
 
 def readSettings(profile, key):
@@ -43,7 +43,7 @@ def readSettings(profile, key):
     if not os.path.isfile(settingsFile):
         return None
     try:
-        with open(settingsFile, 'r',encoding='utf-8') as file:
+        with open(settingsFile, 'r', encoding='utf-8') as file:
             settingsData = file.read()
             settingsJson = json.loads(settingsData)
             return settingsJson[profile][key]

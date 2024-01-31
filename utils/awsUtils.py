@@ -13,7 +13,7 @@ def storeAwsCredentials(accessKey, secretKey, profileName='default'):
     credentialsFile = os.path.join(awsDir, 'credentials')
 
     # Write the credentials
-    with open(credentialsFile, 'w',encoding='utf-8') as file:
+    with open(credentialsFile, 'w', encoding='utf-8') as file:
         file.write(f'[{profileName}]\n')
         file.write(f'aws_access_key_id = {accessKey}\n')
         file.write(f'aws_secret_access_key = {secretKey}\n')
@@ -31,9 +31,6 @@ def checkAwsCredentials(profileName='default'):
     credentialsFile = os.path.join(awsDir, 'credentials')
 
     # Write the credentials
-    with open(credentialsFile, 'r',encoding='utf-8') as file:
+    with open(credentialsFile, 'r', encoding='utf-8') as file:
         credentialsData = file.read()
-        if profileName in credentialsData:
-            return True
-        else:
-            return False
+        return bool(profileName in credentialsData)
