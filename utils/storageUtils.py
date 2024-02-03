@@ -1,7 +1,7 @@
 import os
 import json
 
-def storeSettings(profile, key, value):
+def storeSettings(profile: str, key: str, value):
     # Determine the home directory
     home = os.path.expanduser("~")
 
@@ -29,7 +29,7 @@ def storeSettings(profile, key, value):
     with open(settingsFile, 'w', encoding='utf-8') as file:
         file.write(settingsData)
 
-def readSettings(profile, key):
+def readSettings(profile: str, key: str):
     # Determine the home directory
     home = os.path.expanduser("~")
 
