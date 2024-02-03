@@ -66,7 +66,7 @@ def chooseFileType():
     return fileTypeList[result - 1]
 
 def chooseEncryption():
-    encryptionList = ["None", "AES", "RSA"]
+    encryptionList = ["None", "aes", "rsa"]
     encryptionListWithDescription = ["None  (Stores Files unencrypted)", "AES   (recommended)", "RSA"]
     result = forceUserInputFromList("Choose your Encryption:", encryptionListWithDescription)
     return encryptionList[result - 1]
@@ -117,4 +117,3 @@ def setup():
     print("Your Configuration has been stored in the file ~/.glacier-backup/settings")
     print("Setup complete.")
     input("Press Enter to continue...")
-    

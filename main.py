@@ -1,6 +1,8 @@
 
 import argparse
 import sys
+from dependencyInjection.mainFactory import setupFactoryFromStorage
+from dependencyInjection.service import Service
 from setupGlacier import setup
 from uploadGlacier import upload
 from utils.storageUtils import readSettings
@@ -44,7 +46,7 @@ def guidedExecution():
             print("Invalid choice. Please try again.")
 
 
-
+service = Service()
 def main():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command")
@@ -57,6 +59,8 @@ def main():
     subparsers.add_parser('guided', help='Uses Guided Execution')
 
     args = parser.parse_args()
+
+    setupFactoryFromStorage(service)
 
     # Handle commands
     if args.command == 'upload':
