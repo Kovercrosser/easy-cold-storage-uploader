@@ -8,16 +8,12 @@ from services.encryption.encryptionServiceRsa import EncryptionServiceRsa
 from services.filetype.filetypeServiceNone import FiletypeServiceNone
 from services.filetype.filetypeServiceTar import FiletypeServiceTar
 from services.filetype.filetypeServiceZip import FiletypeServiceZip
+from services.transfer.transferServiceDryrun import TransferServiceDryrun
 from services.transfer.transferServiceGlacier import TransferServiceGlacier
 
 from utils.storageUtils import readSettings
 
-
-def setupFactoryFromStorage(service: Service, profile: str = "default"):
-    if readSettings("global", "setup") is None:
-        raise ValueError("Setup not done yet.")
-
-    compression = readSettings(profile, "compression")
+def setupFactoryFromParameters(service: Service, compression: str = "None", encryption: str = "None", filetype: str = "None", dryrun: bool = False):
     if compression == "None":
         service.setService(CompressionServiceNone(), "compressionService")
     if compression == "bzip2":
@@ -25,7 +21,6 @@ def setupFactoryFromStorage(service: Service, profile: str = "default"):
     if compression == "gzip":
         service.setService(CompressionServiceGzip(), "compressionService")
 
-    encryption = readSettings(profile, "encryption")
     if encryption == "None":
         service.setService(EncryptionServiceNone(), "encryptionService")
     if encryption == "aes":
@@ -33,7 +28,6 @@ def setupFactoryFromStorage(service: Service, profile: str = "default"):
     if encryption == "rsa":
         service.setService(EncryptionServiceRsa(), "encryptionService")
 
-    filetype = readSettings(profile, "filetype")
     if filetype == "None":
         service.setService(FiletypeServiceNone(), "filetypeService")
     if filetype == "tar":
@@ -41,9 +35,16 @@ def setupFactoryFromStorage(service: Service, profile: str = "default"):
     if filetype == "zip":
         service.setService(FiletypeServiceZip(), "filetypeService")
 
-    service.setService(TransferServiceGlacier(), "transferService")
+    if dryrun:
+        service.setService(TransferServiceDryrun(), "transferService")
+    else:
+        service.setService(TransferServiceGlacier(), "transferService")
 
-    return None
+def setupFactoryFromStorage(service: Service, profile: str = "default"):
+    if readSettings("global", "setup") is None:
+        raise ValueError("Setup not done yet.")
 
-def setupFactoryFromParameters():
-    pass
+    compression = readSettings(profile, "compression")
+    encryption = readSettings(profile, "encryption")
+    filetype = readSettings(profile, "filetype")
+    setupFactoryFromParameters(service, compression, encryption, filetype)

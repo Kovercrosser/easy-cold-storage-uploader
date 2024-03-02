@@ -1,6 +1,18 @@
 import os
 import json
 
+def getAllFilesFromDirectoriesAndFiles(paths: list[str]) -> list[str]:
+    files = []
+    for path in paths:
+        if os.path.isfile(path):
+            files.append(path)
+        else:
+            for root, _, allFiles in os.walk(path):
+                for file in allFiles:
+                    filePath = os.path.join(root, file)
+                    files.append(filePath)
+    return files
+
 def storeSettings(profile: str, key: str, value):
     # Determine the home directory
     home = os.path.expanduser("~")

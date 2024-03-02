@@ -1,3 +1,13 @@
+# Upload
 boto3
+
+# Linting and packaging
 pylint
 pyinstaller
+
+# Crypting
+pycryptodome
+
+
+# File handling
+stream-zip

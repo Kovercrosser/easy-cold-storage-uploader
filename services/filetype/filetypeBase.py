@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 class FiletypeBase(ABC):
 
     @abstractmethod
-    def pack(self, data):
+    def pack(self, files: list[str], chunkSize:int):
         pass
 
     @abstractmethod

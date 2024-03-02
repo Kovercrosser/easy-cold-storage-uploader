@@ -1,7 +1,8 @@
 
 import argparse
 import sys
-from dependencyInjection.mainFactory import setupFactoryFromStorage
+import traceback
+from dependencyInjection.mainFactory import setupFactoryFromParameters
 from dependencyInjection.service import Service
 from setupGlacier import setup
 from uploadGlacier import upload
@@ -60,12 +61,14 @@ def main():
 
     args = parser.parse_args()
 
-    setupFactoryFromStorage(service)
+    # setupFactoryFromStorage(service)
+    setupFactoryFromParameters(service, "None", "None", "zip", True)
 
     # Handle commands
     if args.command == 'upload':
         print(f"Trying to upload {len(args.paths)} file(s) using profile: {args.profile}")
-        upload(args.profile, args.paths)
+        upload(service, args.profile, args.paths)
+
     elif args.command == 'setup':
         setup()
     elif args.command == 'guided' or args.command is None:
@@ -81,5 +84,8 @@ if __name__ == "__main__":
         print("\n\nProgram terminated by user. Exiting...", flush=True)
         sys.exit(0)
     except Exception as exception:
+        print("Stacktrace:")
+        traceback.print_exc()
+        print("\n")
         print(f"Unexpected error: {exception}")
         sys.exit(1)
