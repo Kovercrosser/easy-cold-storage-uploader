@@ -3,6 +3,7 @@ from datetime import datetime
 from stream_zip import stream_zip, ZIP_64
 from services.filetype.filetypeBase import FiletypeBase
 
+
 class FiletypeServiceZip(FiletypeBase):
     def pack(self, files: list[str], chunkSize:int):
         if chunkSize < 512:
@@ -12,7 +13,7 @@ class FiletypeServiceZip(FiletypeBase):
             modifiedAt = datetime.now()
             mode = S_IFREG | 0o600
             memberFiles.append(
-                (file, modifiedAt, mode, ZIP_64, open(file, "rb"))
+                (file, modifiedAt, mode, ZIP_64, open(file, "rb")) # pylint: disable=consider-using-with
             )
         zippedChunks = stream_zip(files=memberFiles, chunk_size=chunkSize)
         return zippedChunks
