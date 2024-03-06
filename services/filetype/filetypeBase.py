@@ -9,3 +9,7 @@ class FiletypeBase(ABC):
     @abstractmethod
     def unpack(self, data):
         pass
+
+    @abstractmethod
+    def getExtension(self) -> str:
+        pass

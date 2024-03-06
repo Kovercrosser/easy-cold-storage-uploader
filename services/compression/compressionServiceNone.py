@@ -6,3 +6,6 @@ class CompressionServiceNone(CompressionBase):
 
     def decompress(self, data):
         return data
+
+    def getExtension(self) -> str:
+        return ""

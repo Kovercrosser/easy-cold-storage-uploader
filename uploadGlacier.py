@@ -4,7 +4,6 @@ from utils.storageUtils import getAllFilesFromDirectoriesAndFiles, readSettings
 
 def upload(service: Service, profile: str, paths: list) -> int:
     vault = readSettings(profile, "vault")
-    print(f"Uploading {paths} to {vault}...")
 
     transferService = service.getService("transferService")
     compressService = service.getService("compressionService")
@@ -12,8 +11,10 @@ def upload(service: Service, profile: str, paths: list) -> int:
     filetypeService = service.getService("filetypeService")
 
     files = getAllFilesFromDirectoriesAndFiles(paths)
+    print(f"Uploading {paths} to {vault}...")
+    print(f"Trying to upload {len(files)} file(s) using profile: {profile}")
 
-    value = filetypeService.pack(files, 1024*1024)
+    value = filetypeService.pack(files)
     data = compressService.compress(value)
     transferService.upload(data)
     # print(f"Uploading {len(value)} bytes.")

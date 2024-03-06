@@ -6,3 +6,6 @@ class CompressionServiceBzip2(CompressionBase):
 
     def decompress(self, data):
         return data
+
+    def getExtension(self) -> str:
+        return ".bz2"

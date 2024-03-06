@@ -6,3 +6,6 @@ class FiletypeServiceNone(FiletypeBase):
 
     def unpack(self, data):
         raise NotImplementedError("Unsupported")
+
+    def getExtension(self) -> str:
+        return ""

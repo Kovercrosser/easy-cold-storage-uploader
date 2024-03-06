@@ -9,3 +9,7 @@ class CompressionBase(ABC):
     @abstractmethod
     def decompress(self, data):
         pass
+
+    @abstractmethod
+    def getExtension(self) -> str:
+        pass

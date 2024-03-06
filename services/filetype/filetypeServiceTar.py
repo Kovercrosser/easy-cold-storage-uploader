@@ -6,3 +6,6 @@ class FiletypeServiceTar(FiletypeBase):
 
     def unpack(self, data):
         raise NotImplementedError("Unpacking tar files isnt currently supported.")
+
+    def getExtension(self) -> str:
+        return ".tar"

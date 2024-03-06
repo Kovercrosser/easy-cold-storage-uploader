@@ -3,9 +3,13 @@ from abc import ABC, abstractmethod
 class EncryptionBase(ABC):
 
     @abstractmethod
-    def encrypt(self, data: bytes, key: str or bytes) -> bytes:
+    def encrypt(self, data: bytes, key: str) -> bytes:
         pass
 
     @abstractmethod
-    def decrypt(self, data: bytes, key: str or bytes) -> bytes:
+    def decrypt(self, data: bytes, key: str) -> bytes:
+        pass
+
+    @abstractmethod
+    def getExtension(self) -> str:
         pass
