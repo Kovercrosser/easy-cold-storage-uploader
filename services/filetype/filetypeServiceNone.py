@@ -1,8 +1,8 @@
 from services.filetype.filetypeBase import FiletypeBase
 
 class FiletypeServiceNone(FiletypeBase):
-    def pack(self, files: list[str], chunkSize:int):
-        return
+    def pack(self, files: list[str]):
+        raise NotImplementedError("The Upload of individual Files isnt currently supported.")
 
     def unpack(self, data):
-        return data
+        raise NotImplementedError("Unsupported")

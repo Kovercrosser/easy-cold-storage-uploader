@@ -62,7 +62,7 @@ def main():
     args = parser.parse_args()
 
     # setupFactoryFromStorage(service)
-    setupFactoryFromParameters(service, "None", "None", "zip", True)
+    setupFactoryFromParameters(service, "lzma", "None", "zip", True)
 
     # Handle commands
     if args.command == 'upload':

@@ -1,10 +1,8 @@
 from services.filetype.filetypeBase import FiletypeBase
 
 class FiletypeServiceTar(FiletypeBase):
-    def pack(self, files: list[str], chunkSize:int):
-        if chunkSize < 512:
-            raise ValueError("chunkSize must be at least 512")
-        print(f"Files to be added to the tarfile: {files}")
+    def pack(self, files: list[str]):
+        raise NotImplementedError("Packing into a tar files isnt currently supported.")
 
     def unpack(self, data):
-        return data
+        raise NotImplementedError("Unpacking tar files isnt currently supported.")

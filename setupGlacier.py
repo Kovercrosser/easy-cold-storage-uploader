@@ -54,8 +54,8 @@ def createVault(region):
     return vaultName
 
 def chooseCompression():
-    compressionTypeList = ["None", "gzip", "bzip2"]
-    compressionTypeListWithDescription = ["None", "gzip   (default)", "bzip2  (higher compression -> smaller Filesize, slower)"]
+    compressionTypeList = ["None", "lzma", "bzip2"]
+    compressionTypeListWithDescription = ["None", "lzma   (default)", "bzip2  (higher compression -> smaller Filesize, slower)"]
     result = forceUserInputFromList("Choose your Compression:", compressionTypeListWithDescription)
     return compressionTypeList[result - 1]
 

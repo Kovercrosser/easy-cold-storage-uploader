@@ -1,7 +1,7 @@
 from dependencyInjection.service import Service
 from services.compression.compressionServiceNone import CompressionServiceNone
 from services.compression.compressionServiceBzip2 import CompressionServiceBzip2
-from services.compression.compressionServiceGzip import CompressionServiceGzip
+from services.compression.compressionServiceLzma import CompressionServiceLzma
 from services.encryption.encryptionServiceNone import EncryptionServiceNone
 from services.encryption.encryptionServiceAes import EncryptionServiceAes
 from services.encryption.encryptionServiceRsa import EncryptionServiceRsa
@@ -18,8 +18,8 @@ def setupFactoryFromParameters(service: Service, compression: str = "None", encr
         service.setService(CompressionServiceNone(), "compressionService")
     if compression == "bzip2":
         service.setService(CompressionServiceBzip2(), "compressionService")
-    if compression == "gzip":
-        service.setService(CompressionServiceGzip(), "compressionService")
+    if compression == "lzma":
+        service.setService(CompressionServiceLzma(), "compressionService")
 
     if encryption == "None":
         service.setService(EncryptionServiceNone(), "encryptionService")
@@ -33,7 +33,7 @@ def setupFactoryFromParameters(service: Service, compression: str = "None", encr
     if filetype == "tar":
         service.setService(FiletypeServiceTar(), "filetypeService")
     if filetype == "zip":
-        service.setService(FiletypeServiceZip(), "filetypeService")
+        service.setService(FiletypeServiceZip(compressionLevel=9, chunkSize=1024*1024*5), "filetypeService")
 
     if dryrun:
         service.setService(TransferServiceDryrun(), "transferService")

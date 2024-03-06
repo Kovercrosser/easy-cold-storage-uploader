@@ -6,7 +6,7 @@ class TransferServiceDryrun(TransferBase):
         with open('output.zip', 'wb') as file:
             for chunk in data:
                 size += len(chunk)
-                print(f"Writing {len(chunk)} bytes to output.tar.gzip.aes")
+                print(f"Writing {len(chunk)} bytes to output.zip")
                 file.write(chunk)
         print(f"Upload complete. {size} bytes written to output.zip")
 

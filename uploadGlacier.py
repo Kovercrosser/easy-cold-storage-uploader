@@ -7,15 +7,15 @@ def upload(service: Service, profile: str, paths: list) -> int:
     print(f"Uploading {paths} to {vault}...")
 
     transferService = service.getService("transferService")
-    # compressService = service.getService("compressionService")
+    compressService = service.getService("compressionService")
     # encryptionService = service.getService("encryptionService")
     filetypeService = service.getService("filetypeService")
 
     files = getAllFilesFromDirectoriesAndFiles(paths)
 
     value = filetypeService.pack(files, 1024*1024)
-
-    transferService.upload(value)
+    data = compressService.compress(value)
+    transferService.upload(data)
     # print(f"Uploading {len(value)} bytes.")
     # transferService.upload(value)
     # transferService.upload(stream)
