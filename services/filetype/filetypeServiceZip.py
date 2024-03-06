@@ -34,7 +34,7 @@ class FiletypeServiceZip(FiletypeBase):
             memberFiles.append(
                 (file, modifiedAt, mode, ZIP_64, open(file, "rb")) # pylint: disable=consider-using-with
             )
-        zippedChunks = stream_zip(files=memberFiles, chunk_size=self.chunkSize, get_compressobj=lambda: zlib.compressobj(level=self.compressionLevel))
+        zippedChunks = stream_zip(files=memberFiles, chunk_size=self.chunkSize, get_compressobj=lambda: zlib.compressobj(wbits=-zlib.MAX_WBITS, level=self.compressionLevel))
         return zippedChunks
 
 
