@@ -4,8 +4,8 @@ import sys
 import traceback
 from dependencyInjection.mainFactory import setupFactoryFromParameters
 from dependencyInjection.service import Service
-from setupGlacier import setup
-from uploadGlacier import upload
+from profileSetup import setup
+from uploadExecuter import upload
 from utils.storageUtils import readSettings
 from utils.consoleUtils import clearConsole
 
