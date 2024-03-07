@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Generator
 from dependencyInjection.service import Service
 from services.transfer.transferBase import TransferBase
 
@@ -8,7 +9,7 @@ class TransferServiceSave(TransferBase):
         self.service = service
         super().__init__()
 
-    def upload(self, data,):
+    def upload(self, data: Generator):
         date:str = datetime.now().strftime("%Y-%m-%d")
         fileName:str = date + self.getFileExtension(self.service)
         size:int = 0
@@ -19,5 +20,5 @@ class TransferServiceSave(TransferBase):
                 file.write(chunk)
         print(f"Upload complete. {size} bytes written to {fileName}")
 
-    def download(self, data):
+    def download(self, data: Generator):
         return data

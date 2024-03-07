@@ -1,13 +1,14 @@
 from abc import ABC, abstractmethod
+from typing import Generator
 
 class CompressionBase(ABC):
 
     @abstractmethod
-    def compress(self, data):
+    def compress(self, data: Generator) -> Generator:
         pass
 
     @abstractmethod
-    def decompress(self, data):
+    def decompress(self, data: Generator) -> Generator:
         pass
 
     @abstractmethod

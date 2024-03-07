@@ -22,14 +22,6 @@ def upload(service: Service, profile: str, paths: list) -> int:
     compressedGenerator = compressService.compress(packedGenerator)
     encryptedGenerator = encryptionService.encrypt(compressedGenerator, "")
     transferService.upload(encryptedGenerator)
-    # print(f"Uploading {len(value)} bytes.")
-    # transferService.upload(value)
-    # transferService.upload(stream)
-    # data = compressService.compress(data)
-    # print(f"Compressed to {len(data)} bytes.")
-    # data = encryptionService.encrypt(data, "SimpleKey4AES128")
-    # print(f"Encrypted to {len(data)} bytes.")
-    # transferService.upload(data)
 
     print("Upload complete.")
     return -1

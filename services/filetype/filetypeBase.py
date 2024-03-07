@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Any, Generator
+from typing import Generator
 
 class FiletypeBase(ABC):
 
     @abstractmethod
-    def pack(self, files: list[str]) -> Generator[bytes, Any, None]:
+    def pack(self, files: list[str]) -> Generator:
         pass
 
     @abstractmethod

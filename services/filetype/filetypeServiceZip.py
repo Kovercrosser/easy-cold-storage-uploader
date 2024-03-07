@@ -1,5 +1,5 @@
 import os
-from typing import Any, Generator
+from typing import Generator
 from stat import S_IFREG
 from datetime import datetime
 from stream_zip import stream_zip, ZIP_64, zlib
@@ -20,7 +20,7 @@ class FiletypeServiceZip(FiletypeBase):
         self.chunkSize = chunkSize
         super().__init__()
 
-    def pack(self, files: list[str]) -> Generator[bytes, Any, None]:
+    def pack(self, files: list[str]) -> Generator:
         memberFiles = []
         for file in files:
             modifiedAt:datetime

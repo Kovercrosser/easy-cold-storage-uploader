@@ -1,8 +1,8 @@
-from typing import Any, Generator
+from typing import Generator
 from services.filetype.filetypeBase import FiletypeBase
 
 class FiletypeServiceTar(FiletypeBase):
-    def pack(self, files: list[str]) -> Generator[bytes, Any, None]:
+    def pack(self, files: list[str]) -> Generator:
         raise NotImplementedError("Packing into a tar files isnt currently supported.")
 
     def unpack(self, data):

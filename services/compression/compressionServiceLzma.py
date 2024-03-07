@@ -1,8 +1,9 @@
 import lzma
+from typing import Generator
 from services.compression.compressionBase import CompressionBase
 
 class CompressionServiceLzma(CompressionBase):
-    def compress(self, data):
+    def compress(self, data: Generator) -> Generator:
         print("Compressing data with LZMA in chunks")
         compressor = lzma.LZMACompressor(format=lzma.FORMAT_XZ, check=lzma.CHECK_CRC64)
         originalDataAmount = 0
@@ -17,7 +18,7 @@ class CompressionServiceLzma(CompressionBase):
         yield compressor.flush()
 
 
-    def decompress(self, data):
+    def decompress(self, data: Generator) -> Generator:
         decompressor = lzma.LZMADecompressor()
         for chunk in data:
             yield decompressor.decompress(chunk)
