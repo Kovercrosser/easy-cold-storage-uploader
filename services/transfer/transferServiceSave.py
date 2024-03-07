@@ -2,7 +2,7 @@ from datetime import datetime
 from dependencyInjection.service import Service
 from services.transfer.transferBase import TransferBase
 
-class TransferServiceDryrun(TransferBase):
+class TransferServiceSave(TransferBase):
     service: Service
     def __init__(self,  service: Service) -> None:
         self.service = service

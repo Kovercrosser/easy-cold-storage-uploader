@@ -8,7 +8,7 @@ from services.encryption.encryptionServiceRsa import EncryptionServiceRsa
 from services.filetype.filetypeServiceNone import FiletypeServiceNone
 from services.filetype.filetypeServiceTar import FiletypeServiceTar
 from services.filetype.filetypeServiceZip import FiletypeServiceZip
-from services.transfer.transferServiceDryrun import TransferServiceDryrun
+from services.transfer.transferServiceSave import TransferServiceSave
 from services.transfer.transferServiceGlacier import TransferServiceGlacier
 
 from utils.storageUtils import readSettings
@@ -36,7 +36,7 @@ def setupFactoryFromParameters(service: Service, compression: str = "None", encr
         service.setService(FiletypeServiceZip(compressionLevel=0, chunkSize=1024*1024*5), "filetypeService")
 
     if dryrun:
-        service.setService(TransferServiceDryrun(service), "transferService")
+        service.setService(TransferServiceSave(service), "transferService")
     else:
         service.setService(TransferServiceGlacier(), "transferService")
 
