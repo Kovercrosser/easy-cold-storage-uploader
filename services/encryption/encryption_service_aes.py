@@ -1,5 +1,5 @@
 from typing import Generator
-from services.encryption.encryptionBase import EncryptionBase
+from services.encryption.encryption_base import EncryptionBase
 
 class EncryptionServiceAes(EncryptionBase):
     def encrypt(self, data: Generator, key: str) -> Generator:
@@ -8,5 +8,5 @@ class EncryptionServiceAes(EncryptionBase):
     def decrypt(self, data: Generator, key: str)-> Generator:
         return data
 
-    def getExtension(self) -> str:
+    def get_extension(self) -> str:
         return ".aes"

@@ -1,12 +1,12 @@
 import hashlib
 
-def computeSha256TtreeHash(chunkSha256Hashes: list[str]) -> str:
+def compute_sha256_tree_hash(chunk_sha256_hashes: list[str]) -> str:
     sha256 = hashlib.sha256
-    chunks:list[bytes] = [h.encode() for h in chunkSha256Hashes]
+    chunks:list[bytes] = [h.encode() for h in chunk_sha256_hashes]
     if not chunks:
         return sha256(b'').digest()
     while len(chunks) > 1:
-        newChunks:list[bytes] = []
+        new_chunks:list[bytes] = []
         first = None
         second = None
         for a in chunks:
@@ -14,10 +14,10 @@ def computeSha256TtreeHash(chunkSha256Hashes: list[str]) -> str:
                 first = a
             elif second is None:
                 second = a
-                newChunks.append(sha256(first + second).digest())
+                new_chunks.append(sha256(first + second).digest())
                 first = None
                 second = None
         if first is not None:
-            newChunks.append(first)
-        chunks = newChunks
+            new_chunks.append(first)
+        chunks = new_chunks
     return chunks[0].hex()

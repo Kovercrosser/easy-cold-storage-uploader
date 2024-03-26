@@ -12,5 +12,5 @@ class CompressionBase(ABC):
         pass
 
     @abstractmethod
-    def getExtension(self) -> str:
+    def get_extension(self) -> str:
         pass

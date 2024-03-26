@@ -1,5 +1,5 @@
 from typing import Generator
-from services.filetype.filetypeBase import FiletypeBase
+from services.filetype.filetype_base import FiletypeBase
 
 class FiletypeServiceTar(FiletypeBase):
     def pack(self, files: list[str]) -> Generator:
@@ -8,5 +8,5 @@ class FiletypeServiceTar(FiletypeBase):
     def unpack(self, data):
         raise NotImplementedError("Unpacking tar files isnt currently supported.")
 
-    def getExtension(self) -> str:
+    def get_extension(self) -> str:
         return ".tar"

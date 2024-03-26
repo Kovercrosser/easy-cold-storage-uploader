@@ -1,12 +1,12 @@
 from typing import Generator
-from services.encryption.encryptionBase import EncryptionBase
+from services.encryption.encryption_base import EncryptionBase
 
-class EncryptionServiceNone(EncryptionBase):
+class EncryptionServiceRsa(EncryptionBase):
     def encrypt(self, data: Generator, key: str) -> Generator:
         return data
 
     def decrypt(self, data: Generator, key: str) -> Generator:
         return data
 
-    def getExtension(self) -> str:
-        return ""
+    def get_extension(self) -> str:
+        return ".rsa"

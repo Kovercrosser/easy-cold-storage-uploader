@@ -2,18 +2,18 @@
 
 class Service:
     def __init__(self) -> None:
-        self.compressionService = None
-        self.encryptionService = None
-        self.filetypeService = None
-        self.transferService = None
+        self.compression_service = None
+        self.encryption_service = None
+        self.filetype_service = None
+        self.transfer_service = None
 
-    def setService(self, serviceRef: any, serviceName: str):
-        if serviceRef is None:
+    def set_service(self, service_ref: any, service_name: str):
+        if service_ref is None:
             raise ValueError("Service reference cannot be None.")
-        setattr(self, serviceName, serviceRef)
+        setattr(self, service_name, service_ref)
 
-    def getService(self, serviceName: str):
-        val = getattr(self, serviceName)
+    def get_service(self, service_name: str):
+        val = getattr(self, service_name)
         if val is None:
-            raise ValueError(f"Service {serviceName} not set.")
+            raise ValueError(f"Service {service_name} not set.")
         return val

@@ -1,12 +1,12 @@
 from typing import Generator
-from services.compression.compressionBase import CompressionBase
+from services.compression.compression_base import CompressionBase
 
-class CompressionServiceBzip2(CompressionBase):
+class CompressionServiceNone(CompressionBase):
     def compress(self, data: Generator) -> Generator:
         return data
 
     def decompress(self, data: Generator) -> Generator:
         return data
 
-    def getExtension(self) -> str:
-        return ".bz2"
+    def get_extension(self) -> str:
+        return ""

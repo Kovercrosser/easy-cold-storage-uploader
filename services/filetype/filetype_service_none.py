@@ -1,5 +1,5 @@
 from typing import Generator
-from services.filetype.filetypeBase import FiletypeBase
+from services.filetype.filetype_base import FiletypeBase
 
 class FiletypeServiceNone(FiletypeBase):
     def pack(self, files: list[str]) -> Generator:
@@ -8,5 +8,5 @@ class FiletypeServiceNone(FiletypeBase):
     def unpack(self, data):
         raise NotImplementedError("Unsupported")
 
-    def getExtension(self) -> str:
+    def get_extension(self) -> str:
         return ""

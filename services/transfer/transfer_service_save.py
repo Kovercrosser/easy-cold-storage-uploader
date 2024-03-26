@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Generator
 from dependencyInjection.service import Service
-from services.transfer.transferBase import TransferBase
+from services.transfer.transfer_base import TransferBase
 
 class TransferServiceSave(TransferBase):
     service: Service
@@ -11,7 +11,7 @@ class TransferServiceSave(TransferBase):
 
     def upload(self, data: Generator):
         date:str = datetime.now().strftime("%Y-%m-%d")
-        fileName:str = date + self.getFileExtension(self.service)
+        fileName:str = date + self.get_file_extension(self.service)
         size:int = 0
         with open(fileName, 'wb') as file:
             for chunk in data:

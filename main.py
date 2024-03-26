@@ -2,19 +2,19 @@
 import argparse
 import sys
 import traceback
-from dependencyInjection.mainFactory import setupFactoryFromParameters
+from dependencyInjection.main_factory import setup_factory_from_parameters
 from dependencyInjection.service import Service
-from profileSetup import setup
-from uploadExecuter import upload
-from utils.storageUtils import readSettings
-from utils.consoleUtils import clearConsole
+from profile_setup import setup
+from upload_executer import upload
+from utils.storage_utils import read_settings
+from utils.console_utils import clear_console
 
-def guidedExecution():
-    if readSettings("global", "setup") is None:
+def guided_execution():
+    if read_settings("global", "setup") is None:
         setup()
 
     while True:
-        clearConsole()
+        clear_console()
         print("\n----------------------------------------")
         print("-------------Glacier Backup-------------")
         print("----------------------------------------\n\n")
@@ -43,7 +43,7 @@ def guidedExecution():
         elif choice in ("setup", "9"):
             setup()
         else:
-            clearConsole()
+            clear_console()
             print("Invalid choice. Please try again.")
 
 
@@ -52,9 +52,9 @@ def main():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command")
 
-    parserUpload = subparsers.add_parser('upload', help='Upload help')
-    parserUpload.add_argument('--profile', default='default', help='Profile to use')
-    parserUpload.add_argument('--paths', '-p', nargs='+', help='Paths of the Files and Folders to upload')
+    parser_upload = subparsers.add_parser('upload', help='Upload help')
+    parser_upload.add_argument('--profile', default='default', help='Profile to use')
+    parser_upload.add_argument('--paths', '-p', nargs='+', help='Paths of the Files and Folders to upload')
 
     subparsers.add_parser('setup', help='Initial Setup')
     subparsers.add_parser('guided', help='Uses Guided Execution')
@@ -62,7 +62,7 @@ def main():
     args = parser.parse_args()
 
     # setupFactoryFromStorage(service)
-    setupFactoryFromParameters(service, "None", "None", "zip", False)
+    setup_factory_from_parameters(service, "None", "None", "zip", False)
 
     # Handle commands
     if args.command == 'upload':
@@ -72,7 +72,7 @@ def main():
     elif args.command == 'setup':
         setup()
     elif args.command == 'guided' or args.command is None:
-        guidedExecution()
+        guided_execution()
     else:
         print("Invalid command. Please try again.")
 
