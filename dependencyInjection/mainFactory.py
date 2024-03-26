@@ -33,12 +33,12 @@ def setupFactoryFromParameters(service: Service, compression: str = "None", encr
     if filetype == "tar":
         service.setService(FiletypeServiceTar(), "filetypeService")
     if filetype == "zip":
-        service.setService(FiletypeServiceZip(compressionLevel=0, chunkSize=1024*1024*5), "filetypeService")
+        service.setService(FiletypeServiceZip(compressionLevel=0, chunkSize=2*1024), "filetypeService")
 
     if dryrun:
         service.setService(TransferServiceSave(service), "transferService")
     else:
-        service.setService(TransferServiceGlacier(), "transferService")
+        service.setService(TransferServiceGlacier(service, False, 4), "transferService")
 
 def setupFactoryFromStorage(service: Service, profile: str = "default"):
     if readSettings("global", "setup") is None:
