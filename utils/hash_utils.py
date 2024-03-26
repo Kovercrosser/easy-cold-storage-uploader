@@ -9,11 +9,11 @@ def compute_sha256_tree_hash(chunk_sha256_hashes: list[str]) -> str:
         new_chunks:list[bytes] = []
         first = None
         second = None
-        for a in chunks:
+        for chunk in chunks:
             if first is None:
-                first = a
+                first = chunk
             elif second is None:
-                second = a
+                second = chunk
                 new_chunks.append(sha256(first + second).digest())
                 first = None
                 second = None
