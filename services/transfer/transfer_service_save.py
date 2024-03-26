@@ -11,14 +11,14 @@ class TransferServiceSave(TransferBase):
 
     def upload(self, data: Generator):
         date:str = datetime.now().strftime("%Y-%m-%d")
-        fileName:str = date + self.get_file_extension(self.service)
+        file_name:str = date + self.get_file_extension(self.service)
         size:int = 0
-        with open(fileName, 'wb') as file:
+        with open(file_name, 'wb') as file:
             for chunk in data:
                 size += len(chunk)
-                print(f"Writing {len(chunk)} bytes to {fileName}")
+                print(f"Writing {len(chunk)} bytes to {file_name}")
                 file.write(chunk)
-        print(f"Upload complete. {size} bytes written to {fileName}")
+        print(f"Upload complete. {size} bytes written to {file_name}")
 
     def download(self, data: Generator):
         return data
