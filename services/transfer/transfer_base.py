@@ -6,9 +6,9 @@ class TransferBase(ABC):
 
     @staticmethod
     def get_file_extension(service: Service) -> str:
-        compression_service = service.get_service("compressionService")
-        encryption_service = service.get_service("encryptionService")
-        filetype_service = service.get_service("filetypeService")
+        compression_service = service.get_service("compression_service")
+        encryption_service = service.get_service("encryption_service")
+        filetype_service = service.get_service("filetype_service")
         return filetype_service.get_extension() + compression_service.get_extension() + encryption_service.get_extension()
 
     @abstractmethod
