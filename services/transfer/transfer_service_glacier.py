@@ -139,9 +139,7 @@ class TransferServiceGlacier(TransferBase):
                             body=temp_file,
                             range=f"bytes {part * upload_size_bytes}-{(part * upload_size_bytes) + temp_file_size - 1}/*"
                         )
-                    temp_file.close()
                 except Exception as exception:
-                    temp_file.close()
                     print("Error during a part upload.")
                     print(exception)
                     # TODO: retry Upload
