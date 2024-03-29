@@ -75,7 +75,7 @@ class TransferServiceGlacier(TransferBase):
         self.dryrun = dryrun
         if (upload_size_in_mb & (upload_size_in_mb - 1)) != 0:
             raise ValueError("uploadSize must be a power of 2. This is a limitation of AWS Glacier.")
-        if upload_size_in_mb <= 1 or upload_size_in_mb >= 4096:
+        if upload_size_in_mb < 1 or upload_size_in_mb > 4096:
             raise ValueError("uploadSize must be between 1 MB and 4096 MB. This is a limitation of AWS Glacier.")
         self.upload_size = upload_size_in_mb
         super().__init__()
@@ -174,6 +174,12 @@ class TransferServiceGlacier(TransferBase):
                     'checksum': checksum
                 }
             else:
+                listing = glacier_client.list_multipart_uploads(
+                    vaultName=vault,
+                )
+                print("Listing:")
+                print(listing)
+                
                 complete_status = glacier_client.complete_multipart_upload(
                     vaultName=vault,
                     uploadId=upload_id,
