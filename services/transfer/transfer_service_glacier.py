@@ -126,25 +126,26 @@ class TransferServiceGlacier(TransferBase):
                 temp_file.seek(0, 2)
                 temp_file_size = temp_file.tell()
                 temp_file.seek(0)
-                try:
-                    if self.dryrun:
-                        part_response = {
-                            'checksum': 'DRY_RUN_CHECKSUM'
-                        }
-                    else:
 
-                        byte_range = f"bytes {loop_index * upload_size_bytes}-{(loop_index * upload_size_bytes) + temp_file_size - 1}/*"
+                if self.dryrun:
+                    part_response = {
+                        'checksum': 'DRY_RUN_CHECKSUM'
+                    }
+                else:
+                    byte_range = f"bytes {loop_index * upload_size_bytes}-{(loop_index * upload_size_bytes) + temp_file_size - 1}/*"
+                    try:
                         part_response = glacier_client.upload_multipart_part(
                             vaultName=vault,
                             uploadId=upload_id,
                             body=temp_file,
                             range=byte_range
                         )
-                except Exception as exception:
-                    print("Error during a part upload.")
-                    print(exception)
-                    # TODO: retry Upload
-                    return False
+                    except Exception as exception:
+                        print("Error during a part upload.")
+                        print(exception)
+                        # TODO: retry Upload
+                        return False
+
                 upload_total_size_in_bytes += temp_file_size
                 print(f"Uploaded part {loop_index} with size: {temp_file_size} bytes")
                 print(f"Part response: {part_response}")
