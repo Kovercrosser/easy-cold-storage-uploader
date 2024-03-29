@@ -111,7 +111,6 @@ class TransferServiceGlacier(TransferBase):
         location = creation_response['location']
         print(f"Glacier Upload ID: {upload_id} and location: {location}")
 
-        part = 0
         upload_total_size_in_bytes = 0
         all_uploaded_parts = []
         all_checksums:list[str] = []
@@ -133,11 +132,13 @@ class TransferServiceGlacier(TransferBase):
                             'checksum': 'DRY_RUN_CHECKSUM'
                         }
                     else:
+
+                        byte_range = f"bytes {loop_index * upload_size_bytes}-{(loop_index * upload_size_bytes) + temp_file_size - 1}/*"
                         part_response = glacier_client.upload_multipart_part(
                             vaultName=vault,
                             uploadId=upload_id,
                             body=temp_file,
-                            range=f"bytes {part * upload_size_bytes}-{(part * upload_size_bytes) + temp_file_size - 1}/*"
+                            range=byte_range
                         )
                 except Exception as exception:
                     print("Error during a part upload.")
@@ -149,7 +150,7 @@ class TransferServiceGlacier(TransferBase):
                 print(f"Part response: {part_response}")
                 all_checksums.append(str(part_response['checksum']))
                 all_uploaded_parts.append({
-                    'PartNumber': part,
+                    'PartNumber': loop_index,
                     'ETag': part_response['checksum']
                 })
 
