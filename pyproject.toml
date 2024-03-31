@@ -11,7 +11,7 @@ pylint = "^2.12"
 [tool.poetry.dependencies]
 python = "^3.10"
 
-pyinstaller = "^latest"
+pyinstaller = "6.5"
 rich = "13.7.1"
 boto3 = "1.34.39"
 pycryptodome = "3.20.0"
