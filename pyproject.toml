@@ -6,7 +6,7 @@ authors = ["Manuel Weber"]
 
 [tool.poetry.dev-dependencies]
 pytest = "^8"
-pylint = "^2.12"
+pylint = "^3.1"
 
 [tool.poetry.dependencies]
 python = "3.10.12"
