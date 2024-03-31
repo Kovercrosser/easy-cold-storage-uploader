@@ -139,7 +139,8 @@ disable=missing-docstring,
         too-many-locals,
         too-few-public-methods,
         too-many-branches,
-        too-many-statements
+        too-many-statements,
+        broad-exception-raised
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
@@ -565,11 +566,3 @@ valid-classmethod-first-arg=cls
 
 # List of valid names for the first argument in a metaclass class method.
 valid-metaclass-classmethod-first-arg=cls
-
-
-[EXCEPTIONS]
-
-# Exceptions that will emit a warning when being caught. Defaults to
-# "BaseException, Exception".
-overgeneral-exceptions=BaseException,
-                       Exception
