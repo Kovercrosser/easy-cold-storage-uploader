@@ -46,13 +46,12 @@ jobs:
           python-version-file: pyproject.toml
 
       - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
+        run: pip install poetry
           
       - name: Install dependencies
         run: poetry install --no-interaction
 
-      - name: Create Linux Release File
+      - name: Create Windows Release File
         run: poetry run pyinstaller --onefile main.py
 
       - name: Upload Release Asset
