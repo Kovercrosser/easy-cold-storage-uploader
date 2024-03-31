@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "easy-cold-storage-uploader"
+version = "0.0.1"
+description = ""
+authors = ["Manuel Weber"]
+
+[tool.poetry.dev-dependencies]
+pytest = "^8"
+pylint = "^2.12"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+pyinstaller = "^6.4"
+rich = "13.7.1"
+boto3 = "1.34.39"
+pycryptodome = "3.20.0"
+stream-zip = "0.0.70"
+
+
+
