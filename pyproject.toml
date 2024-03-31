@@ -9,7 +9,7 @@ pytest = "^8"
 pylint = "^2.12"
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "3.10.12"
 
 pyinstaller = "6.5"
 rich = "13.7.1"

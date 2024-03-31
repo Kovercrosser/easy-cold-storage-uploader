@@ -18,7 +18,7 @@ jobs:
         curl -sSL https://install.python-poetry.org | python3 -
 
     - name: Install dependencies
-      run: poetry install --no-interaction
+      run: poetry install --no-interaction --dev
 
     - name: Analysing the code with pylint
       run: poetry run pylint $(git ls-files '*.py')
