@@ -3,6 +3,7 @@ from io import BufferedRandom
 import tempfile
 from typing import Generator
 import boto3
+import botocore
 from dependencyInjection.service import Service
 from services.transfer.transfer_base import TransferBase
 from utils.hash_utils import compute_sha256_tree_hash
@@ -120,6 +121,7 @@ class TransferServiceGlacier(TransferBase):
             with tempfile.TemporaryFile(mode="b+w") as temp_file:
                 try:
                     creater.create_next_upload_size_part(data, upload_size_bytes, temp_file)
+                    chs = botocore.utils.calculate_tree_hash(temp_file)
                 except StopIteration:
                     temp_file.close()
                     break
@@ -138,7 +140,8 @@ class TransferServiceGlacier(TransferBase):
                             vaultName=vault,
                             uploadId=upload_id,
                             body=temp_file,
-                            range=byte_range
+                            range=byte_range,
+                            checksum=chs
                         )
                     except Exception as exception:
                         print("Error during a part upload.")
@@ -149,7 +152,10 @@ class TransferServiceGlacier(TransferBase):
                 upload_total_size_in_bytes += temp_file_size
                 print(f"Uploaded part {loop_index} with size: {temp_file_size} bytes")
                 print(f"Part response: {part_response}")
-                all_checksums.append(str(part_response['checksum']))
+                all_checksums.append(chs)
+                print(f"checksum from method:   {chs}")
+                print(f"checksum from response: {str(part_response['checksum'])}")
+                # all_checksums.append(str(part_response['checksum']))
                 all_uploaded_parts.append({
                     'PartNumber': loop_index,
                     'ETag': part_response['checksum']
@@ -174,12 +180,6 @@ class TransferServiceGlacier(TransferBase):
                     'checksum': checksum
                 }
             else:
-                listing = glacier_client.list_multipart_uploads(
-                    vaultName=vault,
-                )
-                print("Listing:")
-                print(listing)
-                
                 complete_status = glacier_client.complete_multipart_upload(
                     vaultName=vault,
                     uploadId=upload_id,
