@@ -1,15 +1,13 @@
 [tool.poetry]
+package-mode = false
 name = "easy-cold-storage-uploader"
-version = "0.0.1"
-description = ""
-authors = ["Manuel Weber"]
 
 [tool.poetry.dev-dependencies]
 pytest = "^8"
 pylint = "^3.1"
 
 [tool.poetry.dependencies]
-python = "3.10.12"
+python = "3.12.2"
 
 pyinstaller = "6.5"
 rich = "13.7.1"
