@@ -1,6 +1,8 @@
 import hashlib
 
 def compute_sha256_tree_hash(chunk_sha256_hashes: list[str]) -> str:
+    if not isinstance(chunk_sha256_hashes, list) or not all(isinstance(i, str) for i in chunk_sha256_hashes):
+        raise ValueError("Invalid input")
     chunks = chunk_sha256_hashes
     if not chunks:
         return hashlib.sha256(b'').digest()
