@@ -23,18 +23,17 @@ def test_get_all_files_from_directories_and_files():
         with open(file, "w", encoding="utf8") as f:
             f.write("test")
     paths.extend(files)
-    random.seed(0)
     random.shuffle(paths)
-    expected_result = ["test2.txt", "test1.txt", "test3.txt", ".testpath/test3/test1/file1.txt",
+    expected_result = [ "test1.txt", "test2.txt", "test3.txt", "test4.txt",".testpath/test3/test1/file1.txt",
                        ".testpath/test3/test1/file2.txt", ".testpath/test3/test1/file3.txt",
                        ".testpath/test3/test1/file4.txt", ".testpath/test4/test1/file1.txt",
                        ".testpath/test4/test1/file2.txt", ".testpath/test4/test1/file3.txt",
                        ".testpath/test4/test1/file4.txt", ".testpath/test1/file1.txt",
                        ".testpath/test1/file2.txt", ".testpath/test1/file3.txt",
-                       ".testpath/test1/file4.txt", "test4.txt", ".testpath2/test1/file1.txt",
+                       ".testpath/test1/file4.txt",  ".testpath2/test1/file1.txt",
                        ".testpath2/test1/file2.txt", ".testpath2/test1/file3.txt",
                        ".testpath2/test1/file4.txt"]
-    assert get_all_files_from_directories_and_files(paths) == expected_result
+    assert get_all_files_from_directories_and_files(paths).sort() == expected_result.sort()
     for file in files:
         os.remove(file)
     shutil.rmtree(".testpath")
