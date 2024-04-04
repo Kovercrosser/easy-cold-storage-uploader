@@ -14,16 +14,13 @@ def get_all_files_from_directories_and_files(paths: list[str]) -> list[str]:
     return files
 
 def store_settings(profile: str, key: str, value):
-    # Determine the home directory
     home = os.path.expanduser("~")
-
-    # Construct the .aws directory path
-    glacier_dir = os.path.join(home, '.glacier-backup')
-    if not os.path.exists(glacier_dir):
-        os.makedirs(glacier_dir)
+    ecsu_dir = os.path.join(home, '.ecsu')
+    if not os.path.exists(ecsu_dir):
+        os.makedirs(ecsu_dir)
 
     # Path to the settings file
-    settings_file = os.path.join(glacier_dir, 'settings')
+    settings_file = os.path.join(ecsu_dir, 'settings.json')
     if not os.path.exists(settings_file):
         with open(settings_file, 'w', encoding='utf-8') as file:
             file.write('{}')
@@ -42,16 +39,13 @@ def store_settings(profile: str, key: str, value):
         file.write(settings_data)
 
 def read_settings(profile: str, key: str):
-    # Determine the home directory
     home = os.path.expanduser("~")
-
-    # Construct the .aws directory path
-    glacier_dir = os.path.join(home, '.glacier-backup')
-    if not os.path.exists(glacier_dir):
-        os.makedirs(glacier_dir)
+    ecsu_dir = os.path.join(home, '.ecsu')
+    if not os.path.exists(ecsu_dir):
+        os.makedirs(ecsu_dir)
 
     # Path to the settings file
-    settings_file = os.path.join(glacier_dir, 'settings')
+    settings_file = os.path.join(ecsu_dir, 'settings.json')
     if not os.path.isfile(settings_file):
         return None
     try:
