@@ -22,3 +22,6 @@ jobs:
 
     - name: Analysing the code with pylint
       run: poetry run pylint $(git ls-files '*.py')
+
+    - name: run tests
+      run: python3 -m pytest
