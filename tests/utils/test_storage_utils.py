@@ -39,3 +39,7 @@ def test_get_all_files_from_directories_and_files():
         os.remove(file)
     shutil.rmtree(".testpath")
     shutil.rmtree(".testpath2")
+    
+def test_get_all_files_from_directories_and_files_empty():
+    # Test get_all_files_from_directories_and_files with empty paths
+    assert get_all_files_from_directories_and_files([]) == []
