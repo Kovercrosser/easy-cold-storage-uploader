@@ -1,12 +1,10 @@
 name: Pylint
 
-on:
-  push:
-    branches:
-      - master
+on: [push]
+
 jobs:
   build:
-    runs-on: manuelrunner
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
 
