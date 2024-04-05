@@ -22,6 +22,13 @@ class FiletypeServiceZip(FiletypeBase):
 
     def pack(self, files: list[str]) -> Generator:
         member_files = []
+        def read_file(fi):
+            with open(fi, 'rb') as f:
+                while True:
+                    data = f.read(self.chunk_size)
+                    if not data:
+                        return
+                    yield data
         for file in files:
             modified_at:datetime
             seconds_since_modified:float
@@ -33,8 +40,9 @@ class FiletypeServiceZip(FiletypeBase):
 
             mode = S_IFREG | 0o600
             member_files.append(
-                (file, modified_at, mode, ZIP_64, open(file, "rb")) # pylint: disable=consider-using-with
+                (file, modified_at, mode, ZIP_64, read_file(file)) # pylint: disable=consider-using-with
             )
+
         zipped_chunks = stream_zip(
             files=member_files, chunk_size=self.chunk_size,
             get_compressobj=lambda: zlib.compressobj(wbits=-zlib.MAX_WBITS, level=self.compression_level)
