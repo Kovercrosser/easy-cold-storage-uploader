@@ -21,7 +21,10 @@ def upload(service: Service, profile: str, paths: list) -> int:
     packed_generator = filetype_service.pack(files)
     compressed_generator = compression_service.compress(packed_generator)
     encrypted_generator = encryption_service.encrypt(compressed_generator, "")
-    transfer_service.upload(encrypted_generator)
-
-    print("Upload complete.")
-    return -1
+    uplaod_status = transfer_service.upload(encrypted_generator)
+    if uplaod_status:
+        print("Upload complete.")
+        return 0
+    else:
+        print("Upload failed.")
+        return 1

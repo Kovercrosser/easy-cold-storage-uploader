@@ -81,7 +81,7 @@ class TransferServiceGlacier(TransferBase):
         self.upload_size = upload_size_in_mb
         super().__init__()
 
-    def upload(self, data: Generator):
+    def upload(self, data: Generator) -> bool:
         region = read_settings("default", "region")
         vault = read_settings("default", "vault")
         if None in [region, vault]:
@@ -180,6 +180,9 @@ class TransferServiceGlacier(TransferBase):
                     'checksum': checksum
                 }
             else:
+                print(f"Completing upload with {len(all_uploaded_parts)} parts")
+                print(glacier_client.list_parts(vaultName=vault, uploadId=upload_id))
+                # raise Exception("Not implemented yet")
                 complete_status = glacier_client.complete_multipart_upload(
                     vaultName=vault,
                     uploadId=upload_id,
@@ -189,9 +192,12 @@ class TransferServiceGlacier(TransferBase):
             print(f"Upload complete. Archive ID: {complete_status['archiveId']}, Checksum: {complete_status['checksum']}")
             return True
         except Exception as exception:
+            abort_response = glacier_client.abort_multipart_upload(vaultName=vault, uploadId=upload_id)
+            if abort_response["ResponseMetadata"]["HTTPStatusCode"] == 204:
+                print(f"uplaod aborted: {abort_response}")
             print("Error completing upload")
             print(exception)
             return False
 
-    def download(self, data: Generator):
+    def download(self, data: Generator) -> bool:
         return data

@@ -9,7 +9,7 @@ class TransferServiceSave(TransferBase):
         self.service = service
         super().__init__()
 
-    def upload(self, data: Generator):
+    def upload(self, data: Generator) -> bool:
         date:str = datetime.now().strftime("%Y-%m-%d")
         file_name:str = date + self.get_file_extension(self.service)
         size:int = 0
@@ -20,5 +20,5 @@ class TransferServiceSave(TransferBase):
                 file.write(chunk)
         print(f"Upload complete. {size} bytes written to {file_name}")
 
-    def download(self, data: Generator):
+    def download(self, data: Generator) -> bool:
         return data

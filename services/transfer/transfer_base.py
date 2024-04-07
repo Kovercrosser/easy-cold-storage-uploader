@@ -12,9 +12,9 @@ class TransferBase(ABC):
         return filetype_service.get_extension() + compression_service.get_extension() + encryption_service.get_extension()
 
     @abstractmethod
-    def upload(self, data: Generator):
+    def upload(self, data: Generator) -> bool:
         pass
 
     @abstractmethod
-    def download(self, data: Generator):
+    def download(self, data: Generator) -> bool:
         pass
