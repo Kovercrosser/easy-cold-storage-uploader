@@ -25,6 +25,5 @@ def upload(service: Service, profile: str, paths: list) -> int:
     if uplaod_status:
         print("Upload complete.")
         return 0
-    else:
-        print("Upload failed.")
-        return 1
+    print("Upload failed.")
+    return 1
