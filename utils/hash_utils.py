@@ -8,7 +8,7 @@ def compute_sha256_tree_hash(chunk_sha256_hashes: list[bytes]) -> str:
         raise ValueError("List is empty")
     chunks = chunk_sha256_hashes
     if len(chunks) == 1:
-        return binascii.hexlify(hashlib.sha256(chunks[0])).decode('ascii')
+        return binascii.hexlify(hashlib.sha256(chunks[0]).digest()).decode('ascii')
     while len(chunks) > 1:
         new_chunks:list[str] = []
         first = None
