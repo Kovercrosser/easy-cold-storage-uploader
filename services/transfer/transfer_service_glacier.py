@@ -6,7 +6,7 @@ from typing import Generator
 import boto3
 from dependencyInjection.service import Service
 from services.transfer.transfer_base import TransferBase
-from utils.hash_utils import compute_sha256_tree_hash
+from utils.hash_utils import compute_sha256_tree_hash_for_aws
 from utils.storage_utils import read_settings
 
 class TransferServiceGlacierFileCreater:
@@ -152,7 +152,7 @@ class TransferServiceGlacier(TransferBase):
                 print(f"Uploaded part {uploaded_parts} with size: {temp_file_size} bytes")
             uploaded_parts += 1
         try:
-            checksum = compute_sha256_tree_hash(self.hashes)
+            checksum = compute_sha256_tree_hash_for_aws(self.hashes)
             if checksum == "" or checksum is None:
                 print("Error calculating checksum. Upload cannot be completed")
                 return False
