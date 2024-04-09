@@ -1,9 +1,9 @@
 from datetime import datetime
+import hashlib
 from io import BufferedRandom
 import tempfile
 from typing import Generator
 import boto3
-import botocore
 from dependencyInjection.service import Service
 from services.transfer.transfer_base import TransferBase
 from utils.hash_utils import compute_sha256_tree_hash
@@ -65,7 +65,6 @@ class TransferServiceGlacierFileCreater:
                 temp_file.seek(0)
                 return temp_file
 
-
 class TransferServiceGlacier(TransferBase):
     service: Service
     upload_size: int # in MB must be power of two e.g. 1, 2, 4, 8, 16, 32, 64, 128, 256, 512. Min 1MB, Max 4096MB
@@ -80,6 +79,13 @@ class TransferServiceGlacier(TransferBase):
             raise ValueError("uploadSize must be between 1 MB and 4096 MB. This is a limitation of AWS Glacier.")
         self.upload_size = upload_size_in_mb
         super().__init__()
+
+    hashes: list[bytes] = []
+    def add_to_hash_list(self, file: BufferedRandom) -> str:
+        file.seek(0)
+        for data in iter(lambda: file.read(1024*1024), b""):
+            self.hashes.append(hashlib.sha256(data).digest())
+        file.seek(0)
 
     def upload(self, data: Generator) -> bool:
         region = read_settings("default", "region")
@@ -113,36 +119,29 @@ class TransferServiceGlacier(TransferBase):
         print(f"Glacier Upload ID: {upload_id} and location: {location}")
 
         upload_total_size_in_bytes = 0
-        all_uploaded_parts = []
-        all_checksums:list[str] = []
         creater = TransferServiceGlacierFileCreater()
-        loop_index = 0
+        uploaded_parts = 0
         while True:
             with tempfile.TemporaryFile(mode="b+w") as temp_file:
                 try:
                     creater.create_next_upload_size_part(data, upload_size_bytes, temp_file)
-                    chs = botocore.utils.calculate_tree_hash(temp_file)
+                    self.add_to_hash_list(temp_file)
                 except StopIteration:
                     temp_file.close()
                     break
                 temp_file.seek(0, 2)
                 temp_file_size = temp_file.tell()
                 temp_file.seek(0)
-
-                if self.dryrun:
-                    part_response = {
-                        'checksum': 'DRY_RUN_CHECKSUM'
-                    }
-                else:
-                    byte_range = f"bytes {loop_index * upload_size_bytes}-{(loop_index * upload_size_bytes) + temp_file_size - 1}/*"
+                if not self.dryrun:
+                    byte_range = f"bytes {uploaded_parts * upload_size_bytes}-{(uploaded_parts * upload_size_bytes) + temp_file_size - 1}/*"
                     try:
-                        part_response = glacier_client.upload_multipart_part(
+                        glacier_client.upload_multipart_part(
                             vaultName=vault,
                             uploadId=upload_id,
                             body=temp_file,
-                            range=byte_range,
-                            checksum=chs
+                            range=byte_range
                         )
+                        temp_file.seek(0)
                     except Exception as exception:
                         print("Error during a part upload.")
                         print(exception)
@@ -150,46 +149,27 @@ class TransferServiceGlacier(TransferBase):
                         return False
 
                 upload_total_size_in_bytes += temp_file_size
-                print(f"Uploaded part {loop_index} with size: {temp_file_size} bytes")
-                print(f"Part response: {part_response}")
-                all_checksums.append(chs)
-                print(f"checksum from method:   {chs}")
-                print(f"checksum from response: {str(part_response['checksum'])}")
-                # all_checksums.append(str(part_response['checksum']))
-                all_uploaded_parts.append({
-                    'PartNumber': loop_index,
-                    'ETag': part_response['checksum']
-                })
-
-            loop_index += 1
-        print(f"Total Written bytes: {creater.total_written_bytes}")
-        print(f"Total Read bytes: {creater.total_read_bytes}")
-        print(f"Total remaining bytes: {len(creater.remaining_bytes_from_last_part)}")
-        print(f"Total size: {upload_total_size_in_bytes} bytes after function")
-
-        checksum = compute_sha256_tree_hash(all_checksums)
-        print(f"Checksum: {checksum}")
-
-        if checksum == "" or checksum is None:
-            print("Error calculating checksum. Upload cannot be completed")
-            return False
+                print(f"Uploaded part {uploaded_parts} with size: {temp_file_size} bytes")
+            uploaded_parts += 1
         try:
+            checksum = compute_sha256_tree_hash(self.hashes)
+            if checksum == "" or checksum is None:
+                print("Error calculating checksum. Upload cannot be completed")
+                return False
             if self.dryrun:
                 complete_status = {
                     'archiveId': 'DRY_RUN_ARCHIVE_ID',
                     'checksum': checksum
                 }
             else:
-                print(f"Completing upload with {len(all_uploaded_parts)} parts")
-                print(glacier_client.list_parts(vaultName=vault, uploadId=upload_id))
-                # raise Exception("Not implemented yet")
+                print(f"Completing upload with {uploaded_parts} parts")
                 complete_status = glacier_client.complete_multipart_upload(
                     vaultName=vault,
                     uploadId=upload_id,
                     archiveSize=str(upload_total_size_in_bytes),
                     checksum=checksum
                 )
-            print(f"Upload complete. Archive ID: {complete_status['archiveId']}, Checksum: {complete_status['checksum']}")
+            print(f"Upload complete. Archive ID: {complete_status['archiveId']}")
             return True
         except Exception as exception:
             abort_response = glacier_client.abort_multipart_upload(vaultName=vault, uploadId=upload_id)
