@@ -86,7 +86,7 @@ if __name__ == "__main__":
         sys.exit(0)
     except Exception as exception:
         printx("Stacktrace:")
-        traceback.printx_exc()
+        traceback.print_exc()
         printx("\n")
         printx(f"Unexpected error: {exception}")
         sys.exit(1)
