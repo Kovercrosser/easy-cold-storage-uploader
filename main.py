@@ -2,6 +2,7 @@
 import argparse
 import sys
 import traceback
+from rich import print as printx
 from dependencyInjection.main_factory import setup_factory_from_parameters
 from dependencyInjection.service import Service
 from profile_setup import setup
@@ -15,19 +16,19 @@ def guided_execution():
 
     while True:
         clear_console()
-        print("\n----------------------------------------")
-        print("-------------Glacier Backup-------------")
-        print("----------------------------------------\n\n")
-        print("---------------commands:----------------")
-        print("1: upload")
-        print("2: download")
-        print("3: delete")
-        print("\n---------------inventory:---------------")
-        print("4: list all files (from local Database)")
-        print("\n---------------setup:-------------------")
-        print("9: setup")
-        print("\n----------------------------------------\n")
-        print("Press Ctrl+C to exit.\n")
+        printx("\n----------------------------------------")
+        printx("-------------Glacier Backup-------------")
+        printx("----------------------------------------\n\n")
+        printx("---------------commands:----------------")
+        printx("1: upload")
+        printx("2: download")
+        printx("3: delete")
+        printx("\n---------------inventory:---------------")
+        printx("4: list all files (from local Database)")
+        printx("\n---------------setup:-------------------")
+        printx("9: setup")
+        printx("\n----------------------------------------\n")
+        printx("Press Ctrl+C to exit.\n")
 
         choice = input("\nEnter your choice: ")
 
@@ -44,7 +45,7 @@ def guided_execution():
             setup()
         else:
             clear_console()
-            print("Invalid choice. Please try again.")
+            printx("Invalid choice. Please try again.")
 
 
 service = Service()
@@ -66,7 +67,7 @@ def main():
 
     # Handle commands
     if args.command == 'upload':
-        print(f"Trying to upload {len(args.paths)} path(s) using profile: {args.profile}")
+        printx(f"Trying to upload {len(args.paths)} path(s) using profile: {args.profile}")
         upload(service, args.profile, args.paths)
 
     elif args.command == 'setup':
@@ -74,18 +75,18 @@ def main():
     elif args.command == 'guided' or args.command is None:
         guided_execution()
     else:
-        print("Invalid command. Please try again.")
+        printx("Invalid command. Please try again.")
 
 
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\nProgram terminated by user. Exiting...", flush=True)
+        printx("\n\nProgram terminated by user. Exiting...", flush=True)
         sys.exit(0)
     except Exception as exception:
-        print("Stacktrace:")
-        traceback.print_exc()
-        print("\n")
-        print(f"Unexpected error: {exception}")
+        printx("Stacktrace:")
+        traceback.printx_exc()
+        printx("\n")
+        printx(f"Unexpected error: {exception}")
         sys.exit(1)
