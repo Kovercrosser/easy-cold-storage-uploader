@@ -1,8 +1,8 @@
 
 import argparse
 import sys
-import traceback
 from rich import print as printx
+from rich import traceback as tracebackx
 from dependencyInjection.main_factory import setup_factory_from_parameters
 from dependencyInjection.service import Service
 from profile_setup import setup
@@ -86,7 +86,7 @@ if __name__ == "__main__":
         sys.exit(0)
     except Exception as exception:
         printx("Stacktrace:")
-        traceback.print_exc()
+        tracebackx.print_exc()
         printx("\n")
         printx(f"Unexpected error: {exception}")
         sys.exit(1)
