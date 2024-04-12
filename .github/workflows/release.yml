@@ -23,7 +23,7 @@ jobs:
         run: poetry install --no-interaction
 
       - name: Create Linux Release File
-        run: poetry run pyinstaller --onefile main.py
+        run: poetry run pyinstaller -O --onefile main.py
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
@@ -52,7 +52,7 @@ jobs:
         run: poetry install --no-interaction
 
       - name: Create Windows Release File
-        run: poetry run pyinstaller --onefile main.py
+        run: poetry run pyinstaller -O --onefile main.py
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
