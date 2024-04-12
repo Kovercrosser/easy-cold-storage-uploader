@@ -1,3 +1,4 @@
+from rich.console import Console
 from dependencyInjection.service import Service
 from services.compression.compression_service_none import CompressionServiceNone
 from services.compression.compression_service_bzip2 import CompressionServiceBzip2
@@ -43,7 +44,9 @@ def setup_factory_from_parameters(
     if dryrun:
         service.set_service(TransferServiceSave(service), "transfer_service")
     else:
-        service.set_service(TransferServiceGlacier(service, False, 4), "transfer_service")
+        service.set_service(TransferServiceGlacier(service,  False, 4), "transfer_service")
+
+    service.set_service(Console(), "rich_console")
 
 def setup_factory_from_storage(service: Service, profile: str = "default"):
     if read_settings("global", "setup") is None:

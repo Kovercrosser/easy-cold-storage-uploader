@@ -4,8 +4,8 @@ from io import BufferedRandom
 import tempfile
 from typing import Generator
 import boto3
-from rich.progress import Progress, BarColumn
 from rich import print as printx
+from rich.console import Console
 from dependencyInjection.service import Service
 from services.transfer.transfer_base import TransferBase
 from utils.hash_utils import compute_sha256_tree_hash_for_aws
@@ -78,6 +78,13 @@ class CreateSplittedFilesFromGenerator:
                 temp_file.seek(0)
                 return
 
+def human_readable_size(size: int) -> str:
+    for unit in ("", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB"):
+        if abs(size) < 1024.0:
+            return f"{size:3.1f} {unit}"
+        size /= 1024.0
+    return f"{size:.1f} Yi"
+
 class TransferServiceGlacier(TransferBase):
     service: Service
     upload_size: int # in MB must be power of two e.g. 1, 2, 4, 8, 16, 32, 64, 128, 256, 512. Min 1MB, Max 4096MB
@@ -108,11 +115,12 @@ class TransferServiceGlacier(TransferBase):
         glacier_client = boto3.client('glacier', region_name=region)
         date:str = datetime.now().strftime("%Y-%m-%d")
         file_name:str = date + self.get_file_extension(self.service)
+        rich_console: Console = self.service.get_service("rich_console")
 
         upload_size_bytes = self.upload_size * 1024 * 1024
 
         if self.dryrun:
-            printx(f"DRY RUN: Uploading {file_name} to Glacier vault {vault} in {region} region with {upload_size_bytes} byte parts")
+            rich_console.print(f"DRY RUN: Uploading {file_name} to Glacier vault {vault} in {region} region with {upload_size_bytes} byte parts")
             creation_response = {
                 'uploadId': 'DRY_RUN_UPLOAD_ID',
                 'location': 'DRY_RUN_LOCATION'
@@ -125,17 +133,16 @@ class TransferServiceGlacier(TransferBase):
                     partSize=str(upload_size_bytes)
                 )
             except Exception as exception:
-                printx(exception)
+                rich_console.print_exception(exception)
                 return False
         upload_id = creation_response['uploadId']
         location = creation_response['location']
-        printx(f"Glacier Upload ID: {upload_id} and location: {location}")
+        rich_console.print(f"Glacier Upload ID: {upload_id} and location: {location}")
 
         upload_total_size_in_bytes = 0
         creater = CreateSplittedFilesFromGenerator()
         uploaded_parts = 0
-        with Progress("[green]Uploading...[/green]", BarColumn()) as progress:
-            task_id = progress.add_task("uploaded_parts", total=None)
+        with rich_console.status("[bold green]Uploading...") as status:
             while True:
                 with tempfile.TemporaryFile(mode="b+w") as temp_file:
                     try:
@@ -147,9 +154,10 @@ class TransferServiceGlacier(TransferBase):
                     temp_file.seek(0, 2)
                     temp_file_size = temp_file.tell()
                     temp_file.seek(0)
-                    progress.advance(task_id=task_id)
                     if not self.dryrun:
                         byte_range = f"bytes {uploaded_parts * upload_size_bytes}-{(uploaded_parts * upload_size_bytes) + temp_file_size - 1}/*"
+                        status.update(f"[bold green]Uploading part [bold purple]{uploaded_parts + 1} [bold green]"
+                            f"with size: {human_readable_size(temp_file_size)}")
                         try:
                             glacier_client.upload_multipart_part(
                                 vaultName=vault,
@@ -158,18 +166,17 @@ class TransferServiceGlacier(TransferBase):
                                 range=byte_range
                             )
                         except Exception as exception:
-                            printx("Error during a part upload.")
-                            printx(exception)
+                            rich_console.print("[bold red]Error during a part upload.")
+                            rich_console.print_exception(exception)
                             # TODO: retry Upload
                             return False
-
+                        rich_console.print(f"[{datetime.now().strftime('%H:%M:%S')}] Part {uploaded_parts + 1} finished")
                     upload_total_size_in_bytes += temp_file_size
-                    printx(f"Uploaded part {uploaded_parts} with size: {temp_file_size} bytes")
                 uploaded_parts += 1
         try:
             checksum = compute_sha256_tree_hash_for_aws(self.hashes)
             if checksum == "" or checksum is None:
-                printx("Error calculating checksum. Upload cannot be completed")
+                rich_console.print("[bold red]Error calculating checksum. Upload cannot be completed")
                 return False
             if self.dryrun:
                 complete_status = {
@@ -177,21 +184,20 @@ class TransferServiceGlacier(TransferBase):
                     'checksum': checksum
                 }
             else:
-                printx(f"Completing upload with {uploaded_parts} parts")
                 complete_status = glacier_client.complete_multipart_upload(
                     vaultName=vault,
                     uploadId=upload_id,
                     archiveSize=str(upload_total_size_in_bytes),
                     checksum=checksum
                 )
-            printx(f"Upload complete. Archive ID: {complete_status['archiveId']}")
+            rich_console.print(f"Archive ID: [bold green]{complete_status['archiveId']}")
             return True
         except Exception as exception:
             abort_response = glacier_client.abort_multipart_upload(vaultName=vault, uploadId=upload_id)
             if abort_response["ResponseMetadata"]["HTTPStatusCode"] == 204:
-                printx(f"uplaod aborted: {abort_response}")
-            printx("Error completing upload")
-            printx(exception)
+                rich_console.print(f"[bold red]upload aborted: {abort_response}")
+            rich_console.print("[bold red]Error completing upload")
+            rich_console.print_exception(exception)
             return False
 
     def download(self, data: Generator) -> bool:

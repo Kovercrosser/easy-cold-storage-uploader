@@ -67,7 +67,6 @@ def main():
 
     # Handle commands
     if args.command == 'upload':
-        printx(f"Trying to upload {len(args.paths)} path(s) using profile: {args.profile}")
         upload(service, args.profile, args.paths)
 
     elif args.command == 'setup':

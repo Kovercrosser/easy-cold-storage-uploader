@@ -6,6 +6,7 @@ class Service:
         self.encryption_service = None
         self.filetype_service = None
         self.transfer_service = None
+        self.rich_console = None
 
     def set_service(self, service_ref: any, service_name: str):
         if service_ref is None:
