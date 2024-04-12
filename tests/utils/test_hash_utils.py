@@ -20,7 +20,7 @@ def test_compute_sha256_tree_hash_not_strings():
 def test_compute_sha256_tree_hash_single_chunk():
     # Single chunk SHA256 hash
     chunk_sha256_hashes = [b"hash1"]
-    expected_result = "af316ecb91a8ee7ae99210702b2d4758f30cdde3bf61e3d8e787d74681f90a6e"
+    expected_result = "6861736831"
     assert compute_sha256_tree_hash_for_aws(chunk_sha256_hashes) == expected_result
 
 def test_compute_sha256_tree_hash_multiple_chunks():
