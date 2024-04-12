@@ -100,9 +100,6 @@ class TransferServiceGlacier(TransferBase):
         self.upload_size = upload_size_in_mb
         super().__init__()
 
-    def __del__():
-        
-
     hashes: list[bytes] = []
     def add_to_hash_list(self, file: BufferedRandom) -> str:
         file.seek(0)

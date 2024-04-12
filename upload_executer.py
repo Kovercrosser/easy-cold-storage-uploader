@@ -19,8 +19,9 @@ def upload(service: Service, profile: str, paths: list) -> int:
     if len(files) == 0:
         rich_console.print(f"[bold red]No files found in {paths}")
         return 1
-    files_text = len(files) > 1 and "files" or "file"
-    rich_console.print(f"Trying to upload {len(files)} {files_text} to [bold purple]{vault}[/bold purple] using profile: [bold purple]{profile}[/bold purple]")
+    files_text = "files" if len(files) > 1 else "file"
+    rich_console.print(f"Trying to upload {len(files)} {files_text} to [bold purple]{vault}[/bold purple]"
+                        f" using profile: [bold purple]{profile}[/bold purple]")
 
     packed_generator = filetype_service.pack(files)
     compressed_generator = compression_service.compress(packed_generator)

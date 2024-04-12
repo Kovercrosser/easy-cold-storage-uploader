@@ -2,7 +2,6 @@
 import argparse
 import sys
 from rich import print as printx
-from rich import traceback as tracebackx
 from dependencyInjection.main_factory import setup_factory_from_parameters
 from dependencyInjection.service import Service
 from profile_setup import setup
