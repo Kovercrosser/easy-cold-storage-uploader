@@ -4,9 +4,9 @@ from io import BufferedRandom
 import tempfile
 from typing import Generator
 import boto3
-from rich import print as printx
 from rich.console import Console
 from dependencyInjection.service import Service
+from services.cancel_service import CancelService
 from services.transfer.transfer_base import TransferBase
 from utils.hash_utils import compute_sha256_tree_hash_for_aws
 from utils.storage_utils import read_settings
@@ -100,6 +100,9 @@ class TransferServiceGlacier(TransferBase):
         self.upload_size = upload_size_in_mb
         super().__init__()
 
+    def __del__():
+        
+
     hashes: list[bytes] = []
     def add_to_hash_list(self, file: BufferedRandom) -> str:
         file.seek(0)
@@ -137,6 +140,12 @@ class TransferServiceGlacier(TransferBase):
                 return False
         upload_id = creation_response['uploadId']
         location = creation_response['location']
+        cancel_service: CancelService = self.service.get_service("cancel_service")
+        def cancel_upload(reason: str):
+            if not self.dryrun:
+                glacier_client.abort_multipart_upload(vaultName=vault, uploadId=upload_id)
+                rich_console.print(f"[bold red]Uploaded Parts removed on remote because of {reason}.")
+        cancel_uuid = cancel_service.subscribe_to_cancel_event(cancel_upload)
         rich_console.print(f"Glacier Upload ID: {upload_id} and location: {location}")
 
         upload_total_size_in_bytes = 0
@@ -169,6 +178,8 @@ class TransferServiceGlacier(TransferBase):
                             rich_console.print("[bold red]Error during a part upload.")
                             rich_console.print_exception(exception)
                             # TODO: retry Upload
+                            cancel_upload("Error during a part upload.")
+                            cancel_service.unsubscribe_from_cancel_event(cancel_uuid)
                             return False
                         rich_console.print(f"[{datetime.now().strftime('%H:%M:%S')}] Part {uploaded_parts + 1} finished")
                     upload_total_size_in_bytes += temp_file_size
@@ -177,6 +188,8 @@ class TransferServiceGlacier(TransferBase):
             checksum = compute_sha256_tree_hash_for_aws(self.hashes)
             if checksum == "" or checksum is None:
                 rich_console.print("[bold red]Error calculating checksum. Upload cannot be completed")
+                cancel_upload("Error calculating checksum")
+                cancel_service.unsubscribe_from_cancel_event(cancel_uuid)
                 return False
             if self.dryrun:
                 complete_status = {
@@ -184,6 +197,7 @@ class TransferServiceGlacier(TransferBase):
                     'checksum': checksum
                 }
             else:
+                cancel_service.unsubscribe_from_cancel_event(cancel_uuid)
                 complete_status = glacier_client.complete_multipart_upload(
                     vaultName=vault,
                     uploadId=upload_id,
@@ -194,6 +208,7 @@ class TransferServiceGlacier(TransferBase):
             return True
         except Exception as exception:
             abort_response = glacier_client.abort_multipart_upload(vaultName=vault, uploadId=upload_id)
+            cancel_service.unsubscribe_from_cancel_event(cancel_uuid)
             if abort_response["ResponseMetadata"]["HTTPStatusCode"] == 204:
                 rich_console.print(f"[bold red]upload aborted: {abort_response}")
             rich_console.print("[bold red]Error completing upload")

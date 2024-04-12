@@ -9,6 +9,7 @@ from services.encryption.encryption_service_rsa import EncryptionServiceRsa
 from services.filetype.filetype_service_none import FiletypeServiceNone
 from services.filetype.filetype_service_tar import FiletypeServiceTar
 from services.filetype.filetype_service_zip import FiletypeServiceZip
+from services.cancel_service import CancelService
 from services.transfer.transfer_service_save import TransferServiceSave
 from services.transfer.transfer_service_glacier import TransferServiceGlacier
 
@@ -47,6 +48,7 @@ def setup_factory_from_parameters(
         service.set_service(TransferServiceGlacier(service,  False, 4), "transfer_service")
 
     service.set_service(Console(), "rich_console")
+    service.set_service(CancelService(), "cancel_service")
 
 def setup_factory_from_storage(service: Service, profile: str = "default"):
     if read_settings("global", "setup") is None:

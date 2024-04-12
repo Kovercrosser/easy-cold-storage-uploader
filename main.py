@@ -6,6 +6,7 @@ from rich import traceback as tracebackx
 from dependencyInjection.main_factory import setup_factory_from_parameters
 from dependencyInjection.service import Service
 from profile_setup import setup
+from services.cancel_service import CancelService
 from upload_executer import upload
 from utils.storage_utils import read_settings
 from utils.console_utils import clear_console
@@ -82,10 +83,14 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         printx("\n\nProgram terminated by user. Exiting...", flush=True)
+        try:
+            cancel_service: CancelService = service.get_service("cancel_service")
+            cancel_service.cancel("user termination")
+        except ValueError:
+            pass
         sys.exit(0)
     except Exception as exception:
         printx("Stacktrace:")
-        tracebackx.print_exc()
         printx("\n")
         printx(f"Unexpected error: {exception}")
         sys.exit(1)
