@@ -1,10 +1,16 @@
 from datetime import datetime
 import hashlib
+import multiprocessing
 from io import BufferedRandom
 import tempfile
+import time
 from typing import Generator
+import uuid
 import boto3
+import rich
 from rich.console import Console
+from rich.table import Table
+from rich.progress import SpinnerColumn, TextColumn
 from dependencyInjection.service import Service
 from services.cancel_service import CancelService
 from services.transfer.transfer_base import TransferBase
@@ -85,10 +91,22 @@ def human_readable_size(size: int) -> str:
         size /= 1024.0
     return f"{size:.1f} Yi"
 
+def get_file_size(temp_file: BufferedRandom) -> int:
+    temp_file.seek(0, 2)
+    size = temp_file.tell()
+    temp_file.seek(0)
+    return size
+
 class TransferServiceGlacier(TransferBase):
     service: Service
-    upload_size: int # in MB must be power of two e.g. 1, 2, 4, 8, 16, 32, 64, 128, 256, 512. Min 1MB, Max 4096MB
+    upload_size: int
     dryrun: bool
+    hashes: list[bytes] = []
+    cancel_service: CancelService
+    rich_console: Console
+    glacier_client: boto3.client = None
+    cancel_uuid: uuid = None
+    upload_consumer_process: multiprocessing.Process = None
 
     def __init__(self,  service: Service, dryrun: bool = False, upload_size_in_mb: int = 16) -> None:
         self.service = service
@@ -97,10 +115,9 @@ class TransferServiceGlacier(TransferBase):
             raise ValueError("uploadSize must be a power of 2. This is a limitation of AWS Glacier.")
         if upload_size_in_mb < 1 or upload_size_in_mb > 4096:
             raise ValueError("uploadSize must be between 1 MB and 4096 MB. This is a limitation of AWS Glacier.")
-        self.upload_size = upload_size_in_mb
+        self.upload_size = upload_size_in_mb * 1024 * 1024
         super().__init__()
 
-    hashes: list[bytes] = []
     def add_to_hash_list(self, file: BufferedRandom) -> str:
         file.seek(0)
         for data in iter(lambda: file.read(1024*1024), b""):
@@ -108,109 +125,149 @@ class TransferServiceGlacier(TransferBase):
         file.seek(0)
 
     def upload(self, data: Generator) -> bool:
-        region = read_settings("default", "region")
-        vault = read_settings("default", "vault")
+        region:str = read_settings("default", "region")
+        vault:str = read_settings("default", "vault")
         if None in [region, vault]:
             raise Exception("Region or Vault is not set")
-        glacier_client = boto3.client('glacier', region_name=region)
-        date:str = datetime.now().strftime("%Y-%m-%d")
-        file_name:str = date + self.get_file_extension(self.service)
-        rich_console: Console = self.service.get_service("rich_console")
+        self.glacier_client = boto3.client('glacier', region_name=region)
+        self.cancel_service = self.service.get_service("cancel_service")
+        self.rich_console = self.service.get_service("rich_console")
+        file_name:str = datetime.now().strftime("%Y-%m-%d") + self.get_file_extension(self.service)
 
-        upload_size_bytes = self.upload_size * 1024 * 1024
+        upload_id, location = self.__init_upload(file_name=file_name, vault=vault, region=region)
 
+        table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("Upload ID", style="dim")
+        table.add_column("Location", style="dim")
+        table.add_row(upload_id, location)
+        self.rich_console.print(table)
+
+        # Upload the parts
+        try:
+            upload_total_size_in_bytes: int = self.__upload_parts(data, upload_id, vault)
+        except Exception:
+            self.rich_console.print("[bold red]Error during upload")
+            self.rich_console.print_exception()
+            self.cancel_upload(self, "Error during upload", vault, upload_id)
+            self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
+            self.glacier_client = None
+            return False
+
+        # Finish the upload
+        try:
+            self.__finish_upload(upload_id, vault, upload_total_size_in_bytes)
+        except Exception:
+            self.rich_console.print("[bold red]Error during finishing the upload")
+            self.rich_console.print_exception()
+            self.cancel_upload(self, "Error during finishing the upload", vault, upload_id)
+            self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
+            self.glacier_client = None
+            return False
+        self.glacier_client = None
+        return True
+
+    def __finish_upload(self, upload_id: str, vault: str, upload_total_size_in_bytes: int) -> bool:
+        checksum = compute_sha256_tree_hash_for_aws(self.hashes)
+        self.hashes = []
+        if checksum == "" or checksum is None:
+            raise Exception("Error calculating checksum. Upload cannot be completed")
         if self.dryrun:
-            rich_console.print(f"DRY RUN: Uploading {file_name} to Glacier vault {vault} in {region} region with {upload_size_bytes} byte parts")
-            creation_response = {
-                'uploadId': 'DRY_RUN_UPLOAD_ID',
-                'location': 'DRY_RUN_LOCATION'
+            complete_status = {
+                'archiveId': 'DRY_RUN_ARCHIVE_ID',
+                'checksum': checksum
             }
         else:
-            try:
-                creation_response = glacier_client.initiate_multipart_upload(
-                    vaultName=vault,
-                    archiveDescription=f'{file_name}',
-                    partSize=str(upload_size_bytes)
-                )
-            except Exception as exception:
-                rich_console.print_exception(exception)
-                return False
-        upload_id = creation_response['uploadId']
-        location = creation_response['location']
-        cancel_service: CancelService = self.service.get_service("cancel_service")
-        def cancel_upload(reason: str):
-            if not self.dryrun:
-                glacier_client.abort_multipart_upload(vaultName=vault, uploadId=upload_id)
-                rich_console.print(f"[bold red]Uploaded Parts removed on remote because of {reason}.")
-        cancel_uuid = cancel_service.subscribe_to_cancel_event(cancel_upload)
-        rich_console.print(f"Glacier Upload ID: {upload_id} and location: {location}")
-
-        upload_total_size_in_bytes = 0
-        creater = CreateSplittedFilesFromGenerator()
-        uploaded_parts = 0
-        with rich_console.status("[bold green]Uploading...") as status:
-            while True:
-                with tempfile.TemporaryFile(mode="b+w") as temp_file:
-                    try:
-                        creater.create_next_upload_size_part(data, upload_size_bytes, temp_file)
-                        self.add_to_hash_list(temp_file)
-                    except StopIteration:
-                        temp_file.close()
-                        break
-                    temp_file.seek(0, 2)
-                    temp_file_size = temp_file.tell()
-                    temp_file.seek(0)
-                    if not self.dryrun:
-                        byte_range = f"bytes {uploaded_parts * upload_size_bytes}-{(uploaded_parts * upload_size_bytes) + temp_file_size - 1}/*"
-                        status.update(f"[bold green]Uploading part [bold purple]{uploaded_parts + 1} [bold green]"
-                            f"with size: {human_readable_size(temp_file_size)}")
-                        try:
-                            glacier_client.upload_multipart_part(
-                                vaultName=vault,
-                                uploadId=upload_id,
-                                body=temp_file,
-                                range=byte_range
-                            )
-                        except Exception as exception:
-                            rich_console.print("[bold red]Error during a part upload.")
-                            rich_console.print_exception(exception)
-                            # TODO: retry Upload
-                            cancel_upload("Error during a part upload.")
-                            cancel_service.unsubscribe_from_cancel_event(cancel_uuid)
-                            return False
-                        rich_console.print(f"[{datetime.now().strftime('%H:%M:%S')}] Part {uploaded_parts + 1} finished")
-                    upload_total_size_in_bytes += temp_file_size
-                uploaded_parts += 1
-        try:
-            checksum = compute_sha256_tree_hash_for_aws(self.hashes)
-            if checksum == "" or checksum is None:
-                rich_console.print("[bold red]Error calculating checksum. Upload cannot be completed")
-                cancel_upload("Error calculating checksum")
-                cancel_service.unsubscribe_from_cancel_event(cancel_uuid)
-                return False
-            if self.dryrun:
-                complete_status = {
-                    'archiveId': 'DRY_RUN_ARCHIVE_ID',
-                    'checksum': checksum
-                }
-            else:
-                cancel_service.unsubscribe_from_cancel_event(cancel_uuid)
-                complete_status = glacier_client.complete_multipart_upload(
+            self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
+            with self.rich_console.status("[bold green]Finishing up..."):
+                complete_status = self.glacier_client.complete_multipart_upload(
                     vaultName=vault,
                     uploadId=upload_id,
                     archiveSize=str(upload_total_size_in_bytes),
                     checksum=checksum
                 )
-            rich_console.print(f"Archive ID: [bold green]{complete_status['archiveId']}")
-            return True
-        except Exception as exception:
-            abort_response = glacier_client.abort_multipart_upload(vaultName=vault, uploadId=upload_id)
-            cancel_service.unsubscribe_from_cancel_event(cancel_uuid)
-            if abort_response["ResponseMetadata"]["HTTPStatusCode"] == 204:
-                rich_console.print(f"[bold red]upload aborted: {abort_response}")
-            rich_console.print("[bold red]Error completing upload")
-            rich_console.print_exception(exception)
-            return False
+        self.rich_console.print(f"Archive ID: [bold green]{complete_status['archiveId']}")
+
+
+    def __init_upload(self, file_name:str, vault:str, region:str) -> bool:
+        if self.dryrun:
+            self.rich_console.print(f"DRY RUN: Uploading {file_name} to Glacier vault {vault} in {region} region with {self.upload_size} byte parts")
+            creation_response = {
+                'uploadId': 'DRY_RUN_UPLOAD_ID',
+                'location': 'DRY_RUN_LOCATION'
+            }
+        else:
+            creation_response = self.glacier_client.initiate_multipart_upload(
+                vaultName=vault,
+                archiveDescription=f'{file_name}',
+                partSize=str(self.upload_size)
+            )
+        self.cancel_uuid = self.cancel_service.subscribe_to_cancel_event(
+            self.cancel_upload, vault, creation_response['uploadId'], self_reference=self)
+        return creation_response['uploadId'] , creation_response['location']
+
+    def __upload_consumer(self, queue: multiprocessing.Queue, upload_id: str, vault: str):
+        with self.rich_console.status("[bold green]Uploading...") as status:
+            while True:
+                try:
+                    data = queue.get()
+                except queue.Empty:
+                    time.sleep(1)
+                    continue
+                if data == "finish":
+                    break
+                if not isinstance(data, dict) or not isinstance(data["data"], bytes) or not isinstance(data["range"], str) or not isinstance(data["part"], int):
+                    continue
+                status.update(f"[bold green]Uploading Part [bold purple]{str(data['part'] + 1)} [bold green]")
+                try:
+                    self.glacier_client.upload_multipart_part(
+                        vaultName=vault,
+                        uploadId=upload_id,
+                        body=data["data"],
+                        range=data["range"]
+                    )
+                except Exception:
+                    self.rich_console.print("[bold red]Error during a part upload.")
+                    self.rich_console.print_exception()
+                self.rich_console.print(f"[purple][{datetime.now().strftime('%H:%M:%S')}][/purple] Part {str(data['part'] + 1)} uploaded")
+
+    def __upload_parts(self, data: Generator, upload_id: str, vault: str):
+        upload_total_size_in_bytes = 0
+        creater = CreateSplittedFilesFromGenerator()
+        uploaded_parts = 0
+        queue = multiprocessing.Queue()
+        self.upload_consumer_process = multiprocessing.Process(target=self.__upload_consumer, args=(queue, upload_id, vault))
+        self.upload_consumer_process.start()
+        while True:
+            with tempfile.TemporaryFile(mode="b+w") as temp_file:
+                while queue.qsize() >= 1:
+                    time.sleep(1)
+                try:
+                    creater.create_next_upload_size_part(data, self.upload_size, temp_file)
+                    self.add_to_hash_list(temp_file)
+                except StopIteration:
+                    temp_file.close()
+                    break
+                temp_file_size = get_file_size(temp_file)
+                if not self.dryrun:
+                    queue.put({
+                        "range": f"bytes {uploaded_parts * self.upload_size}-{(uploaded_parts * self.upload_size) + temp_file_size - 1}/*",
+                        "part": uploaded_parts,
+                        "data": temp_file.read()})
+                upload_total_size_in_bytes += temp_file_size
+            uploaded_parts += 1
+        queue.put("finish")
+        self.upload_consumer_process.join()
+        return upload_total_size_in_bytes
+
+    def cancel_upload(self, reason: str, vault: str = "", upload_id: str = ""):
+        self.cancel_uuid = None
+        if not self.dryrun:
+            if self.upload_consumer_process:
+                self.upload_consumer_process.terminate()
+                self.upload_consumer_process = None
+            if vault == "" or upload_id == "":
+                self.glacier_client.abort_multipart_upload(vaultName=vault, uploadId=upload_id)
+            self.rich_console.print(f"[bold red]Uploaded Parts removed on remote because of {reason}.")
 
     def download(self, data: Generator) -> bool:
         return data
