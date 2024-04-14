@@ -3,8 +3,8 @@ from services.compression.compression_base import CompressionBase
 from services.encryption.encryption_base import EncryptionBase
 from services.filetype.filetype_base import FiletypeBase
 from services.transfer.transfer_base import TransferBase
-from utils.storage_utils import (get_all_files_from_directories_and_files,
-                                 read_settings)
+from utils.storage_utils import get_all_files_from_directories_and_files
+from utils.storage_utils import read_settings
 
 
 def upload(service: Service, profile: str, paths: list) -> int:
