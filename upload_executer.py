@@ -8,6 +8,13 @@ from utils.storage_utils import (get_all_files_from_directories_and_files,
 
 
 def upload(service: Service, profile: str, paths: list) -> int:
+    """
+
+    :param service: Service: 
+    :param profile: str: 
+    :param paths: list: 
+
+    """
     rich_console = service.get_service("rich_console")
     vault = read_settings(profile, "vault")
 
