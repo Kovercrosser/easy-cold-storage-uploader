@@ -7,10 +7,8 @@ import time
 from typing import Generator
 import uuid
 import boto3
-import rich
 from rich.console import Console
 from rich.table import Table
-from rich.progress import SpinnerColumn, TextColumn
 from dependencyInjection.service import Service
 from services.cancel_service import CancelService
 from services.transfer.transfer_base import TransferBase
@@ -85,11 +83,12 @@ class CreateSplittedFilesFromGenerator:
                 return
 
 def human_readable_size(size: int) -> str:
+    sizef = float(size)
     for unit in ("", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB"):
-        if abs(size) < 1024.0:
-            return f"{size:3.1f} {unit}"
-        size /= 1024.0
-    return f"{size:.1f} Yi"
+        if abs(sizef) < 1024.0:
+            return f"{sizef:3.1f} {unit}"
+        sizef /= 1024.0
+    return f"{sizef:.1f} Yi"
 
 def get_file_size(temp_file: BufferedRandom) -> int:
     temp_file.seek(0, 2)
@@ -104,8 +103,8 @@ class TransferServiceGlacier(TransferBase):
     hashes: list[bytes] = []
     cancel_service: CancelService
     rich_console: Console
-    glacier_client: boto3.client = None
-    cancel_uuid: uuid = None
+    glacier_client: boto3.client | None = None
+    cancel_uuid: uuid.UUID | None = None
     upload_consumer_process: multiprocessing.Process = None
 
     def __init__(self,  service: Service, dryrun: bool = False, upload_size_in_mb: int = 16) -> None:
@@ -125,8 +124,8 @@ class TransferServiceGlacier(TransferBase):
         file.seek(0)
 
     def upload(self, data: Generator) -> bool:
-        region:str = read_settings("default", "region")
-        vault:str = read_settings("default", "vault")
+        region:str | None = read_settings("default", "region")
+        vault:str | None = read_settings("default", "vault")
         if None in [region, vault]:
             raise Exception("Region or Vault is not set")
         self.glacier_client = boto3.client('glacier', region_name=region)

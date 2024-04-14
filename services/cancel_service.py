@@ -1,12 +1,12 @@
 from pyclbr import Class
-from typing import Callable, List
+from typing import Callable, Dict, List
 import uuid
 
 
 class CancelService:
-    subscriptions: List[object] = []
+    subscriptions: List[Dict] = []
 
-    def subscribe_to_cancel_event(self, cancel_callback: Callable[[str], None], *args, self_reference:Class = None):
+    def subscribe_to_cancel_event(self, cancel_callback: Callable[..., None], *args, self_reference:Class = None):
         map_uuid = uuid.uuid4()
         self.subscriptions.append({ "callback": cancel_callback, "uuid": map_uuid, "self_reference": self_reference, "args": args})
         return map_uuid
@@ -16,11 +16,11 @@ class CancelService:
 
     def cancel(self, reason: str):
         for callback in self.subscriptions:
-            fun = callback["callback"]
+            fun: Callable[..., None] = callback["callback"]
             if fun is None:
                 continue
             self_reference = callback["self_reference"]
-            if self_reference and not None:
+            if self_reference:
                 if callback["args"]:
                     fun(self_reference, reason, *callback["args"])
                 fun(self_reference, reason)
