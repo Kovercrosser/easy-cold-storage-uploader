@@ -1,12 +1,11 @@
-from pyclbr import Class
-from typing import Callable, Dict, List
+from typing import Any, Callable, Dict, List
 import uuid
 
 
 class CancelService:
     subscriptions: List[Dict] = []
 
-    def subscribe_to_cancel_event(self, cancel_callback: Callable[..., None], *args, self_reference:Class = None):
+    def subscribe_to_cancel_event(self, cancel_callback: Callable[..., None], *args, self_reference:Any = None):
         map_uuid = uuid.uuid4()
         self.subscriptions.append({ "callback": cancel_callback, "uuid": map_uuid, "self_reference": self_reference, "args": args})
         return map_uuid

@@ -4,7 +4,7 @@ import multiprocessing
 from io import BufferedRandom
 import tempfile
 import time
-from typing import Generator
+from typing import Generator, Tuple
 import uuid
 import boto3
 from rich.console import Console
@@ -103,9 +103,11 @@ class TransferServiceGlacier(TransferBase):
     hashes: list[bytes] = []
     cancel_service: CancelService
     rich_console: Console
-    glacier_client: boto3.client | None = None
+    glacier_client = None
     cancel_uuid: uuid.UUID | None = None
-    upload_consumer_process: multiprocessing.Process = None
+    upload_consumer_process_1: multiprocessing.Process | None = None
+    upload_consumer_process_2: multiprocessing.Process | None = None
+    upload_consumer_status_reporter: multiprocessing.Process | None = None
 
     def __init__(self,  service: Service, dryrun: bool = False, upload_size_in_mb: int = 16) -> None:
         self.service = service
@@ -117,7 +119,7 @@ class TransferServiceGlacier(TransferBase):
         self.upload_size = upload_size_in_mb * 1024 * 1024
         super().__init__()
 
-    def add_to_hash_list(self, file: BufferedRandom) -> str:
+    def add_to_hash_list(self, file: BufferedRandom):
         file.seek(0)
         for data in iter(lambda: file.read(1024*1024), b""):
             self.hashes.append(hashlib.sha256(data).digest())
@@ -132,7 +134,8 @@ class TransferServiceGlacier(TransferBase):
         self.cancel_service = self.service.get_service("cancel_service")
         self.rich_console = self.service.get_service("rich_console")
         file_name:str = datetime.now().strftime("%Y-%m-%d") + self.get_file_extension(self.service)
-
+        assert region is not None
+        assert vault is not None
         upload_id, location = self.__init_upload(file_name=file_name, vault=vault, region=region)
 
         table = Table(show_header=True, header_style="bold magenta")
@@ -147,25 +150,29 @@ class TransferServiceGlacier(TransferBase):
         except Exception:
             self.rich_console.print("[bold red]Error during upload")
             self.rich_console.print_exception()
-            self.cancel_upload(self, "Error during upload", vault, upload_id)
+            self.cancel_upload("Error during upload", vault, upload_id)
             self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
             self.glacier_client = None
             return False
-
+        if upload_total_size_in_bytes == -1:
+            self.cancel_upload("User Interrupt", vault, upload_id)
+            self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
+            self.glacier_client = None
+            return False
         # Finish the upload
         try:
             self.__finish_upload(upload_id, vault, upload_total_size_in_bytes)
         except Exception:
             self.rich_console.print("[bold red]Error during finishing the upload")
             self.rich_console.print_exception()
-            self.cancel_upload(self, "Error during finishing the upload", vault, upload_id)
+            self.cancel_upload("Error during finishing the upload", vault, upload_id)
             self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
             self.glacier_client = None
             return False
         self.glacier_client = None
         return True
 
-    def __finish_upload(self, upload_id: str, vault: str, upload_total_size_in_bytes: int) -> bool:
+    def __finish_upload(self, upload_id: str, vault: str, upload_total_size_in_bytes: int):
         checksum = compute_sha256_tree_hash_for_aws(self.hashes)
         self.hashes = []
         if checksum == "" or checksum is None:
@@ -176,18 +183,22 @@ class TransferServiceGlacier(TransferBase):
                 'checksum': checksum
             }
         else:
-            self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
+            if self.cancel_uuid:
+                self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
             with self.rich_console.status("[bold green]Finishing up..."):
-                complete_status = self.glacier_client.complete_multipart_upload(
-                    vaultName=vault,
-                    uploadId=upload_id,
-                    archiveSize=str(upload_total_size_in_bytes),
-                    checksum=checksum
-                )
+                if self.glacier_client:
+                    complete_status = self.glacier_client.complete_multipart_upload(
+                        vaultName=vault,
+                        uploadId=upload_id,
+                        archiveSize=str(upload_total_size_in_bytes),
+                        checksum=checksum
+                    )
+                else:
+                    raise Exception("Internal Error: Glacier client is not set")
         self.rich_console.print(f"Archive ID: [bold green]{complete_status['archiveId']}")
 
 
-    def __init_upload(self, file_name:str, vault:str, region:str) -> bool:
+    def __init_upload(self, file_name:str, vault:str, region:str) -> Tuple[str, str]:
         if self.dryrun:
             self.rich_console.print(f"DRY RUN: Uploading {file_name} to Glacier vault {vault} in {region} region with {self.upload_size} byte parts")
             creation_response = {
@@ -195,78 +206,136 @@ class TransferServiceGlacier(TransferBase):
                 'location': 'DRY_RUN_LOCATION'
             }
         else:
-            creation_response = self.glacier_client.initiate_multipart_upload(
-                vaultName=vault,
-                archiveDescription=f'{file_name}',
-                partSize=str(self.upload_size)
-            )
-        self.cancel_uuid = self.cancel_service.subscribe_to_cancel_event(
-            self.cancel_upload, vault, creation_response['uploadId'], self_reference=self)
+            if self.glacier_client:
+                creation_response = self.glacier_client.initiate_multipart_upload(
+                    vaultName=vault,
+                    archiveDescription=f'{file_name}',
+                    partSize=str(self.upload_size)
+                )
+            else:
+                raise Exception("Internal Error: Glacier client is not set")
+        self.cancel_uuid = self.cancel_service.subscribe_to_cancel_event(self.cancel_upload, vault, creation_response['uploadId'], self_reference=self)
         return creation_response['uploadId'] , creation_response['location']
 
-    def __upload_consumer(self, queue: multiprocessing.Queue, upload_id: str, vault: str):
-        with self.rich_console.status("[bold green]Uploading...") as status:
+    def __upload_consumer(self, queue: multiprocessing.Queue, upload_id: str, vault: str, status: multiprocessing.Queue):
+        try:
             while True:
-                try:
-                    data = queue.get()
-                except queue.Empty:
+                if queue.empty():
+                    status.put("waiting")
                     time.sleep(1)
                     continue
+                data = queue.get()
                 if data == "finish":
+                    queue.put("finish")
+                    status.put("finished")
                     break
                 if not isinstance(data, dict) or not isinstance(data["data"], bytes) or not isinstance(data["range"], str) or not isinstance(data["part"], int):
                     continue
-                status.update(f"[bold green]Uploading Part [bold purple]{str(data['part'] + 1)} [bold green]")
+                status.put(f"uploading Part {str(data["part"] + 1)}")
                 try:
-                    self.glacier_client.upload_multipart_part(
-                        vaultName=vault,
-                        uploadId=upload_id,
-                        body=data["data"],
-                        range=data["range"]
-                    )
+                    if self.glacier_client:
+                        self.glacier_client.upload_multipart_part(
+                            vaultName=vault,
+                            uploadId=upload_id,
+                            body=data["data"],
+                            range=data["range"]
+                        )
+                    else:
+                        raise Exception("Internal Error: Glacier client is not set")
                 except Exception:
                     self.rich_console.print("[bold red]Error during a part upload.")
                     self.rich_console.print_exception()
-                self.rich_console.print(f"[purple][{datetime.now().strftime('%H:%M:%S')}][/purple] Part {str(data['part'] + 1)} uploaded")
+        except KeyboardInterrupt:
+            return
 
     def __upload_parts(self, data: Generator, upload_id: str, vault: str):
         upload_total_size_in_bytes = 0
         creater = CreateSplittedFilesFromGenerator()
         uploaded_parts = 0
         queue = multiprocessing.Queue()
-        self.upload_consumer_process = multiprocessing.Process(target=self.__upload_consumer, args=(queue, upload_id, vault))
-        self.upload_consumer_process.start()
+        status_1 = multiprocessing.Queue()
+        status_2 = multiprocessing.Queue()
+        self.upload_consumer_status_reporter = multiprocessing.Process(target=self.__upload_consumer_status_reporter, args=([status_1, status_2],))
+        self.upload_consumer_process_1 = multiprocessing.Process(target=self.__upload_consumer, args=(queue, upload_id, vault, status_1))
+        self.upload_consumer_process_2 = multiprocessing.Process(target=self.__upload_consumer, args=(queue, upload_id, vault, status_2))
+        self.upload_consumer_process_1.start()
+        self.upload_consumer_process_2.start()
+        self.upload_consumer_status_reporter.start()
         while True:
-            with tempfile.TemporaryFile(mode="b+w") as temp_file:
-                while queue.qsize() >= 1:
-                    time.sleep(1)
-                try:
-                    creater.create_next_upload_size_part(data, self.upload_size, temp_file)
-                    self.add_to_hash_list(temp_file)
-                except StopIteration:
-                    temp_file.close()
-                    break
-                temp_file_size = get_file_size(temp_file)
-                if not self.dryrun:
-                    queue.put({
-                        "range": f"bytes {uploaded_parts * self.upload_size}-{(uploaded_parts * self.upload_size) + temp_file_size - 1}/*",
-                        "part": uploaded_parts,
-                        "data": temp_file.read()})
-                upload_total_size_in_bytes += temp_file_size
+            try:
+                with tempfile.TemporaryFile(mode="b+w") as temp_file:
+                    while queue.qsize() > 1:
+                        time.sleep(0.5)
+                    try:
+                        creater.create_next_upload_size_part(data, self.upload_size, temp_file)
+                        self.add_to_hash_list(temp_file)
+                    except StopIteration:
+                        temp_file.close()
+                        break
+                    temp_file_size = get_file_size(temp_file)
+                    if not self.dryrun:
+                        queue.put({
+                            "range": f"bytes {uploaded_parts * self.upload_size}-{(uploaded_parts * self.upload_size) + temp_file_size - 1}/*",
+                            "part": uploaded_parts,
+                            "data": temp_file.read()})
+                    upload_total_size_in_bytes += temp_file_size
+            except KeyboardInterrupt:
+                return -1
             uploaded_parts += 1
         queue.put("finish")
-        self.upload_consumer_process.join()
+        self.upload_consumer_process_1.join()
+        self.upload_consumer_process_2.join()
+        self.upload_consumer_status_reporter.join()
         return upload_total_size_in_bytes
+
+    def __upload_consumer_status_reporter(self, status_queues: list[multiprocessing.Queue]):
+        try:
+            with self.rich_console.status("") as status:
+                old_values = ["" for _ in status_queues]
+                finished: int = 0
+                while True:
+                    new_values = []
+                    for queue in status_queues:
+                        if not queue.empty():
+                            new_values.append(queue.get())
+                        else:
+                            new_values.append("")
+                    for i, new_value in enumerate(new_values):
+                        if new_value:
+                            if new_value == "finished":
+                                finished += 1
+                            old_value = old_values[i]
+                            old_values[i] = new_value
+                            if old_value and old_value != "waiting":
+                                self.rich_console.print(f"[purple][{datetime.now().strftime('%H:%M:%S')}][/purple] {old_value.replace("uploading ", "")} finished")
+                    table = Table(show_header=True, header_style="bold magenta")
+                    table.add_column("Worker", justify="center")
+                    table.add_column("Status", justify="center")
+                    for index, value in enumerate(old_values):
+                        table.add_row(f"{index + 1}", value, style="bold green")
+                    status.update(table)
+                    if finished == len(status_queues):
+                        break
+                    time.sleep(0.1)
+        except KeyboardInterrupt:
+            return
 
     def cancel_upload(self, reason: str, vault: str = "", upload_id: str = ""):
         self.cancel_uuid = None
         if not self.dryrun:
-            if self.upload_consumer_process:
-                self.upload_consumer_process.terminate()
-                self.upload_consumer_process = None
+            if self.upload_consumer_process_1:
+                self.upload_consumer_process_1.terminate()
+                self.upload_consumer_process_1 = None
+            if self.upload_consumer_process_2:
+                self.upload_consumer_process_2.terminate()
+                self.upload_consumer_process_2 = None
+            if self.upload_consumer_status_reporter:
+                self.upload_consumer_status_reporter.terminate()
+                self.upload_consumer_status_reporter = None
             if vault == "" or upload_id == "":
-                self.glacier_client.abort_multipart_upload(vaultName=vault, uploadId=upload_id)
-            self.rich_console.print(f"[bold red]Uploaded Parts removed on remote because of {reason}.")
+                if self.glacier_client:
+                    self.glacier_client.abort_multipart_upload(vaultName=vault, uploadId=upload_id)
+                    self.rich_console.print(f"[bold red]Uploaded Parts removed on remote because of {reason}.")
 
     def download(self, data: Generator) -> bool:
         return data
