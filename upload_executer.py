@@ -10,9 +10,9 @@ from utils.storage_utils import read_settings
 def upload(service: Service, profile: str, paths: list) -> int:
     """
 
-    :param service: Service: 
-    :param profile: str: 
-    :param paths: list: 
+    :param service: Service:
+    :param profile: str:
+    :param paths: list:
 
     """
     rich_console = service.get_service("rich_console")
