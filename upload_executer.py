@@ -14,6 +14,7 @@ def upload(service: Service, profile: str, paths: list) -> int:
     compression_service: CompressionBase = service.get_service("compression_service")
     encryption_service: EncryptionBase = service.get_service("encryption_service")
     filetype_service: FiletypeBase = service.get_service("filetype_service")
+    print("why")
     with rich_console.status("[bold green]Gathering information about the files..."):
         files = get_all_files_from_directories_and_files(paths)
     if len(files) == 0:
