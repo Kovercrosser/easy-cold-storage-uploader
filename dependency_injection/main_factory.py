@@ -1,5 +1,5 @@
 from rich.console import Console
-from dependencyInjection.service import Service
+from dependency_injection.service import Service
 from services.compression.compression_service_none import CompressionServiceNone
 from services.compression.compression_service_bzip2 import CompressionServiceBzip2
 from services.compression.compression_service_lzma import CompressionServiceLzma

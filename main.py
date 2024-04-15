@@ -2,8 +2,8 @@
 import argparse
 import sys
 from rich import print as printx
-from dependencyInjection.main_factory import setup_factory_from_parameters
-from dependencyInjection.service import Service
+from dependency_injection.main_factory import setup_factory_from_parameters
+from dependency_injection.service import Service
 from profile_setup import setup
 from services.cancel_service import CancelService
 from upload_executer import upload

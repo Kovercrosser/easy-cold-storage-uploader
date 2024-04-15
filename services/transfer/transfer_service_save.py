@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Generator
-from dependencyInjection.service import Service
+from dependency_injection.service import Service
 from services.transfer.transfer_base import TransferBase
 
 class TransferServiceSave(TransferBase):

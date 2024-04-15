@@ -2,7 +2,6 @@ from datetime import datetime
 import hashlib
 import multiprocessing
 from io import BufferedRandom
-from queue import Queue
 import tempfile
 import time
 from typing import Any, Generator, Tuple
@@ -10,7 +9,7 @@ import uuid
 import boto3
 from rich.console import Console
 from rich.table import Table
-from dependencyInjection.service import Service
+from dependency_injection.service import Service
 from services.cancel_service import CancelService
 from services.transfer.transfer_base import TransferBase
 from utils.hash_utils import compute_sha256_tree_hash_for_aws

@@ -1,4 +1,4 @@
-from dependencyInjection.service import Service
+from dependency_injection.service import Service
 from services.compression.compression_base import CompressionBase
 from services.encryption.encryption_base import EncryptionBase
 from services.filetype.filetype_base import FiletypeBase
