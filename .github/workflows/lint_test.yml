@@ -21,7 +21,7 @@ jobs:
       run: poetry install --no-interaction
 
     - name: Checking Code Quality with mypy
-      run: mypy --strict --exclude "/tests*" .
+      run: poetry run mypy --strict --exclude "/tests*" .
 
     - name: Analysing the code with pylint
       run: poetry run pylint $(git ls-files '*.py')
