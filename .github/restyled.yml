@@ -5,4 +5,4 @@ exclude:
 auto: false
 pull_requests: true
 restylers:
-  - black
+  - reorder-python-imports
