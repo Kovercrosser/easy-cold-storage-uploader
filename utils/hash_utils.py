@@ -1,18 +1,19 @@
 import binascii
 import hashlib
+from typing import List
 
-def compute_sha256_tree_hash_for_aws(chunk_sha256_hashes: list[bytes]) -> str:
+def compute_sha256_tree_hash_for_aws(chunk_sha256_hashes: List[bytes]) -> str:
     if not isinstance(chunk_sha256_hashes, list) or not all(isinstance(i, bytes) for i in chunk_sha256_hashes) or not all(chunk_sha256_hashes):
         raise ValueError("Invalid input")
     if not chunk_sha256_hashes:
         raise ValueError("List is empty")
-    chunks = chunk_sha256_hashes
+    chunks: List[bytes] = chunk_sha256_hashes
     if len(chunks) == 1:
         return binascii.hexlify(chunks[0]).decode('ascii')
     while len(chunks) > 1:
-        new_chunks:list[str] = []
-        first = None
-        second = None
+        new_chunks: List[bytes] = []
+        first: bytes | None = None
+        second: bytes | None = None
         for chunk in chunks:
             if first is None:
                 first = chunk

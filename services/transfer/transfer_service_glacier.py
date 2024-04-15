@@ -2,9 +2,10 @@ from datetime import datetime
 import hashlib
 import multiprocessing
 from io import BufferedRandom
+from queue import Queue
 import tempfile
 import time
-from typing import Generator, Tuple
+from typing import Any, Generator, Tuple
 import uuid
 import boto3
 from rich.console import Console
@@ -25,7 +26,7 @@ class CreateSplittedFilesFromGenerator:
     total_read_bytes: int = 0
     total_written_bytes: int = 0
 
-    def create_next_upload_size_part(self, data: Generator, upload_size_bytes: int, temp_file: BufferedRandom):
+    def create_next_upload_size_part(self, data: Generator[bytes,None,None], upload_size_bytes: int, temp_file: BufferedRandom) -> None:
         """
         This function reads data from a generator and writes it to a temporary file of a given size.
         
@@ -119,13 +120,13 @@ class TransferServiceGlacier(TransferBase):
         self.upload_size = upload_size_in_mb * 1024 * 1024
         super().__init__()
 
-    def add_to_hash_list(self, file: BufferedRandom):
+    def add_to_hash_list(self, file: BufferedRandom) -> None:
         file.seek(0)
         for data in iter(lambda: file.read(1024*1024), b""):
             self.hashes.append(hashlib.sha256(data).digest())
         file.seek(0)
 
-    def upload(self, data: Generator) -> bool:
+    def upload(self, data: Generator[bytes,None,None]) -> bool:
         region:str | None = read_settings("default", "region")
         vault:str | None = read_settings("default", "vault")
         if None in [region, vault]:
@@ -151,12 +152,14 @@ class TransferServiceGlacier(TransferBase):
             self.rich_console.print("[bold red]Error during upload")
             self.rich_console.print_exception()
             self.cancel_upload("Error during upload", vault, upload_id)
-            self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
+            if self.cancel_uuid:
+                self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
             self.glacier_client = None
             return False
         if upload_total_size_in_bytes == -1:
             self.cancel_upload("User Interrupt", vault, upload_id)
-            self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
+            if self.cancel_uuid:
+                self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
             self.glacier_client = None
             return False
         # Finish the upload
@@ -166,13 +169,14 @@ class TransferServiceGlacier(TransferBase):
             self.rich_console.print("[bold red]Error during finishing the upload")
             self.rich_console.print_exception()
             self.cancel_upload("Error during finishing the upload", vault, upload_id)
-            self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
+            if self.cancel_uuid:
+                self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
             self.glacier_client = None
             return False
         self.glacier_client = None
         return True
 
-    def __finish_upload(self, upload_id: str, vault: str, upload_total_size_in_bytes: int):
+    def __finish_upload(self, upload_id: str, vault: str, upload_total_size_in_bytes: int) -> None:
         checksum = compute_sha256_tree_hash_for_aws(self.hashes)
         self.hashes = []
         if checksum == "" or checksum is None:
@@ -217,7 +221,7 @@ class TransferServiceGlacier(TransferBase):
         self.cancel_uuid = self.cancel_service.subscribe_to_cancel_event(self.cancel_upload, vault, creation_response['uploadId'], self_reference=self)
         return creation_response['uploadId'] , creation_response['location']
 
-    def __upload_consumer(self, queue: multiprocessing.Queue, upload_id: str, vault: str, status: multiprocessing.Queue):
+    def __upload_consumer(self, queue: multiprocessing.Queue[Any], upload_id: str, vault: str, status: multiprocessing.Queue[str]) -> None:
         try:
             while True:
                 if queue.empty():
@@ -248,13 +252,13 @@ class TransferServiceGlacier(TransferBase):
         except KeyboardInterrupt:
             return
 
-    def __upload_parts(self, data: Generator, upload_id: str, vault: str):
+    def __upload_parts(self, data: Generator[bytes,None,None], upload_id: str, vault: str) -> int:
         upload_total_size_in_bytes = 0
         creater = CreateSplittedFilesFromGenerator()
         uploaded_parts = 0
-        queue: queue = multiprocessing.Queue()
-        status_1 = multiprocessing.Queue()
-        status_2 = multiprocessing.Queue()
+        queue: multiprocessing.Queue[Any] = multiprocessing.Queue()
+        status_1: multiprocessing.Queue[str] = multiprocessing.Queue()
+        status_2: multiprocessing.Queue[str] = multiprocessing.Queue()
         self.upload_consumer_status_reporter = multiprocessing.Process(target=self.__upload_consumer_status_reporter, args=([status_1, status_2],))
         self.upload_consumer_process_1 = multiprocessing.Process(target=self.__upload_consumer, args=(queue, upload_id, vault, status_1))
         self.upload_consumer_process_2 = multiprocessing.Process(target=self.__upload_consumer, args=(queue, upload_id, vault, status_2))
@@ -288,7 +292,7 @@ class TransferServiceGlacier(TransferBase):
         self.upload_consumer_status_reporter.join()
         return upload_total_size_in_bytes
 
-    def __upload_consumer_status_reporter(self, status_queues: list[multiprocessing.Queue]):
+    def __upload_consumer_status_reporter(self, status_queues: list[multiprocessing.Queue[str]]) -> None:
         try:
             with self.rich_console.status("") as status:
                 old_values = ["" for _ in status_queues]
@@ -320,7 +324,7 @@ class TransferServiceGlacier(TransferBase):
         except KeyboardInterrupt:
             return
 
-    def cancel_upload(self, reason: str, vault: str = "", upload_id: str = ""):
+    def cancel_upload(self, reason: str, vault: str = "", upload_id: str = "") -> None:
         self.cancel_uuid = None
         if not self.dryrun:
             if self.upload_consumer_process_1:
@@ -337,5 +341,5 @@ class TransferServiceGlacier(TransferBase):
                     self.glacier_client.abort_multipart_upload(vaultName=vault, uploadId=upload_id)
                     self.rich_console.print(f"[bold red]Uploaded Parts removed on remote because of {reason}.")
 
-    def download(self, data: Generator) -> bool:
-        return data
+    def download(self, data: Generator[bytes,None,None]) -> bool:
+        raise NotImplementedError("Downloading files isnt currently supported.")

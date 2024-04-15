@@ -10,7 +10,7 @@ from upload_executer import upload
 from utils.storage_utils import read_settings
 from utils.console_utils import clear_console
 
-def guided_execution():
+def guided_execution() -> None:
     if read_settings("global", "setup") is None:
         setup()
 
@@ -49,7 +49,7 @@ def guided_execution():
 
 
 service = Service()
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command")
 

@@ -13,7 +13,7 @@ def get_all_files_from_directories_and_files(paths: list[str]) -> list[str]:
                     files.append(file_path)
     return files
 
-def store_settings(profile: str, key: str, value) -> str | None:
+def store_settings(profile: str, key: str, value: str) -> None:
     home = os.path.expanduser("~")
     ecsu_dir = os.path.join(home, '.ecsu')
     if not os.path.exists(ecsu_dir):
@@ -52,6 +52,6 @@ def read_settings(profile: str, key: str) -> str | None:
         with open(settings_file, 'r', encoding='utf-8') as file:
             settings_data = file.read()
             settings_json = json.loads(settings_data)
-            return settings_json[profile][key]
+            return str(settings_json[profile][key])
     except Exception:
         return None

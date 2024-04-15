@@ -4,11 +4,11 @@ from typing import Generator
 class FiletypeBase(ABC):
 
     @abstractmethod
-    def pack(self, files: list[str]) -> Generator:
+    def pack(self, files: list[str]) -> Generator[bytes,None,None]:
         pass
 
     @abstractmethod
-    def unpack(self, data):
+    def unpack(self, data:Generator[bytes,None,None])-> None:
         pass
 
     @abstractmethod

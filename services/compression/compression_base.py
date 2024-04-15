@@ -4,11 +4,11 @@ from typing import Generator
 class CompressionBase(ABC):
 
     @abstractmethod
-    def compress(self, data: Generator) -> Generator:
+    def compress(self, data: Generator[bytes,None,None]) -> Generator[bytes,None,None]:
         pass
 
     @abstractmethod
-    def decompress(self, data: Generator) -> Generator:
+    def decompress(self, data: Generator[bytes,None,None]) -> Generator[bytes,None,None]:
         pass
 
     @abstractmethod

@@ -20,7 +20,7 @@ def setup_factory_from_parameters(
     compression: str = "None",
     encryption: str = "None",
     filetype: str = "None",
-    dryrun: bool = False):
+    dryrun: bool = False) -> None:
     if compression == "None":
         service.set_service(CompressionServiceNone(), "compression_service")
     if compression == "bzip2":
@@ -50,11 +50,16 @@ def setup_factory_from_parameters(
     service.set_service(Console(), "rich_console")
     service.set_service(CancelService(), "cancel_service")
 
-def setup_factory_from_storage(service: Service, profile: str = "default"):
+def setup_factory_from_storage(service: Service, profile: str = "default") -> None:
     if read_settings("global", "setup") is None:
         raise ValueError("Setup not done yet.")
 
     compression = read_settings(profile, "compression")
     encryption = read_settings(profile, "encryption")
     filetype = read_settings(profile, "filetype")
+    if any([compression is None, encryption is None, filetype is None]):
+        raise ValueError("Profile not setup correctly.")
+    assert compression is not None
+    assert encryption is not None
+    assert filetype is not None
     setup_factory_from_parameters(service, compression, encryption, filetype)

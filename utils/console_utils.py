@@ -1,12 +1,13 @@
 import os
+from typing import Optional
 from rich import print as printx
 
-def clear_console(new_header: str = None):
+def clear_console(new_header: str = "") -> None:
     os.system('cls' if os.name == 'nt' else 'clear')
-    if new_header is not None:
+    if new_header:
         printx(new_header + "\n")
 
-def force_user_input_from_list(header: str, user_options: list) -> int:
+def force_user_input_from_list(header: str, user_options: list[str]) -> int:
     printx("\n" + header + ": ")
     for index, option in enumerate(user_options):
         printx(str(index + 1) + ": " + str(option))
@@ -18,8 +19,8 @@ def force_user_input_from_list(header: str, user_options: list) -> int:
         printx("Invalid input. Please try again.")
     return int(choice)
 
-def force_user_input(header: str, valid_options: list = None) -> str:
-    if valid_options is None:
+def force_user_input(header: str, valid_options: Optional[list[str]]) -> str:
+    if valid_options:
         valid_options = []
     printx("\n" + header + ": ")
     while True:

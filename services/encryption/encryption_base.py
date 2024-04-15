@@ -4,11 +4,11 @@ from typing import Generator
 class EncryptionBase(ABC):
 
     @abstractmethod
-    def encrypt(self, data: Generator, key: str) -> Generator:
+    def encrypt(self, data: Generator[bytes,None,None], key: str) -> Generator[bytes,None,None]:
         pass
 
     @abstractmethod
-    def decrypt(self, data: Generator, key: str) -> Generator:
+    def decrypt(self, data: Generator[bytes,None,None], key: str) -> Generator[bytes,None,None]:
         pass
 
     @abstractmethod

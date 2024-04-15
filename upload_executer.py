@@ -6,7 +6,7 @@ from services.transfer.transfer_base import TransferBase
 from utils.storage_utils import get_all_files_from_directories_and_files, read_settings
 
 
-def upload(service: Service, profile: str, paths: list) -> int:
+def upload(service: Service, profile: str, paths: list[str]) -> int:
     rich_console = service.get_service("rich_console")
     vault = read_settings(profile, "vault")
 

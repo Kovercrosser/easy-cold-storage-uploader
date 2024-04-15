@@ -2,7 +2,7 @@ import os
 from typing import Generator
 from stat import S_IFREG
 from datetime import datetime
-from stream_zip import stream_zip, ZIP_64, zlib
+from stream_zip import stream_zip, ZIP_64, zlib # type: ignore
 from services.filetype.filetype_base import FiletypeBase
 
 
@@ -20,9 +20,9 @@ class FiletypeServiceZip(FiletypeBase):
         self.chunk_size = chunk_size
         super().__init__()
 
-    def pack(self, files: list[str]) -> Generator:
+    def pack(self, files: list[str]) -> Generator[bytes,None,None]:
         member_files = []
-        def read_file(fi):
+        def read_file(fi: str) -> Generator[bytes, None, None]:
             with open(fi, 'rb') as f:
                 while True:
                     data = f.read(self.chunk_size)
@@ -43,14 +43,14 @@ class FiletypeServiceZip(FiletypeBase):
                 (file, modified_at, mode, ZIP_64, read_file(file)) # pylint: disable=consider-using-with
             )
 
-        zipped_chunks = stream_zip(
+        zipped_chunks:Generator[bytes, None, None] = stream_zip(
             files=member_files, chunk_size=self.chunk_size,
             get_compressobj=lambda: zlib.compressobj(wbits=-zlib.MAX_WBITS, level=self.compression_level)
             )
         return zipped_chunks
 
 
-    def unpack(self, data):
+    def unpack(self, data: Generator[bytes,None,None]) -> None:
         raise NotImplementedError("Unpacking zip files isnt currently supported.")
 
     def get_extension(self) -> str:

@@ -1,6 +1,6 @@
 import os
 
-def store_aws_credentials(access_key, secret_key, profile_name='default'):
+def store_aws_credentials(access_key: str, secret_key: str, profile_name:str = 'default') -> None:
     home = os.path.expanduser("~")
     aws_dir = os.path.join(home, '.aws')
     if not os.path.exists(aws_dir):
@@ -13,7 +13,7 @@ def store_aws_credentials(access_key, secret_key, profile_name='default'):
         file.write(f'aws_access_key_id = {access_key}\n')
         file.write(f'aws_secret_access_key = {secret_key}\n')
 
-def check_aws_credentials(profile_name='default'):
+def check_aws_credentials(profile_name: str ='default') -> bool:
     home = os.path.expanduser("~")
     aws_dir = os.path.join(home, '.aws')
     if not os.path.exists(aws_dir):
