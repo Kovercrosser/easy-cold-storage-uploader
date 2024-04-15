@@ -1,0 +1,8 @@
+enabled: true
+exclude:
+  - ".github/**/*"
+  - "tests/**/*"
+auto: false
+pull_requests: true
+restylers:
+  - black
