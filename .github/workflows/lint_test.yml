@@ -20,6 +20,9 @@ jobs:
     - name: Install dependencies
       run: poetry install --no-interaction
 
+    - name: Checking Code Quality with mypy
+      run: mypy --strict .
+
     - name: Analysing the code with pylint
       run: poetry run pylint $(git ls-files '*.py')
 
