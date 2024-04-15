@@ -5,3 +5,4 @@ main.spec
 .vscode/
 poetry.lock
 .mypy_cache/
+.pytest_cache/
