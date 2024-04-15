@@ -21,9 +21,7 @@ jobs:
       run: poetry install --no-interaction
 
     - name: Checking Code Quality with mypy
-      uses: jpetrucciani/mypy-check@master
-      with:
-        mypy_flags: '--config-file .mypy.ini'
+      run: mypy --strict .
 
     - name: Analysing the code with pylint
       run: poetry run pylint $(git ls-files '*.py')

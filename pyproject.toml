@@ -1,6 +1,6 @@
 [tool.poetry]
 package-mode = false
-name = "easy-cold-storage-uploader"
+name = "easy_cold_storage_uploader"
 
 [tool.poetry.dev-dependencies]
 pytest = "^8"

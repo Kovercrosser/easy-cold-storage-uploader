@@ -252,7 +252,7 @@ class TransferServiceGlacier(TransferBase):
         upload_total_size_in_bytes = 0
         creater = CreateSplittedFilesFromGenerator()
         uploaded_parts = 0
-        queue = multiprocessing.Queue()
+        queue: queue = multiprocessing.Queue()
         status_1 = multiprocessing.Queue()
         status_2 = multiprocessing.Queue()
         self.upload_consumer_status_reporter = multiprocessing.Process(target=self.__upload_consumer_status_reporter, args=([status_1, status_2],))
