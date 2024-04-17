@@ -27,7 +27,7 @@ jobs:
         run: poetry run pyinstaller --onefile main.py
       
       - name: Rename Exe
-        run: move .\dist\main ecsu_linux_x64_${{ github.ref_tag }}.bin
+        run: mv dist/main ecsu_linux_x64_${{ github.ref_tag }}.bin
 
       - name: Release
         uses: softprops/action-gh-release@v2
