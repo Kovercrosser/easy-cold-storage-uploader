@@ -1,8 +1,9 @@
 name: Create Release
 
 on:
-  release:
-    types: [created]
+  push:
+    tags:
+      - "v*.*.*"
 
 jobs:
   create_linux_release:
@@ -24,16 +25,16 @@ jobs:
 
       - name: Create Linux Release File
         run: poetry run pyinstaller --onefile main.py
+      
+      - name: Rename Exe
+        run: move .\dist\main ecsu_linux_x64_${{ github.ref_tag }}.bin
 
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./dist/main
-          asset_name: glacier_linux_x64.bin
-          asset_content_type: application/octet-stream
+          files: ecsu_linux_x64_${{ github.ref_tag }}.bin
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   create_windows_release:
     runs-on: windows-latest
@@ -54,12 +55,12 @@ jobs:
       - name: Create Windows Release File
         run: poetry run pyinstaller --onefile main.py
 
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Rename Exe
+        run: move .\dist\main.exe ecsu_win_x64_${{ github.ref_tag }}.exe
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./dist/main.exe
-          asset_name: glacier_windows_x64.exe
-          asset_content_type: application/octet-stream
+          files: ecsu_win_x64_${{ github.ref_tag }}.exe
+          token: ${{ secrets.GITHUB_TOKEN }}
