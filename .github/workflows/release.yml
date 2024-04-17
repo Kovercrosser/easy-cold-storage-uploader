@@ -9,10 +9,10 @@ jobs:
   create_linux_release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version-file: pyproject.toml
 
@@ -27,22 +27,22 @@ jobs:
         run: poetry run pyinstaller --onefile main.py
       
       - name: Rename Exe
-        run: mv dist/main ecsu_linux_x64_${{ github.ref_tag }}.bin
+        run: mv dist/main ecsu_linux_x64_${{ github.ref_name }}.bin
 
       - name: Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: ecsu_linux_x64_${{ github.ref_tag }}.bin
+          files: ecsu_linux_x64_${{ github.ref_name }}.bin
           token: ${{ secrets.GITHUB_TOKEN }}
 
   create_windows_release:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version-file: pyproject.toml
 
@@ -56,11 +56,11 @@ jobs:
         run: poetry run pyinstaller --onefile main.py
 
       - name: Rename Exe
-        run: move .\dist\main.exe ecsu_win_x64_${{ github.ref_tag }}.exe
+        run: move .\dist\main.exe ecsu_win_x64_${{ github.ref_name }}.exe
 
       - name: Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: ecsu_win_x64_${{ github.ref_tag }}.exe
+          files: ecsu_win_x64_${{ github.ref_name }}.exe
           token: ${{ secrets.GITHUB_TOKEN }}
