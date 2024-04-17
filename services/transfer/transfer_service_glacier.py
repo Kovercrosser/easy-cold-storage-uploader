@@ -1,10 +1,11 @@
 from datetime import datetime
 import hashlib
-import multiprocessing
+import multiprocessing as mp
+from multiprocessing import Queue
 from io import BufferedRandom
 import tempfile
 import time
-from typing import Any, Generator, Tuple
+from typing import Generator, Tuple, Union
 import uuid
 import boto3
 from rich.console import Console
@@ -105,9 +106,9 @@ class TransferServiceGlacier(TransferBase):
     rich_console: Console
     glacier_client = None
     cancel_uuid: uuid.UUID | None = None
-    upload_consumer_process_1: multiprocessing.Process | None = None
-    upload_consumer_process_2: multiprocessing.Process | None = None
-    upload_consumer_status_reporter: multiprocessing.Process | None = None
+    upload_consumer_process_1: mp.Process | None = None
+    upload_consumer_process_2: mp.Process | None = None
+    upload_consumer_status_reporter: mp.Process | None = None
 
     def __init__(self,  service: Service, dryrun: bool = False, upload_size_in_mb: int = 16) -> None:
         self.service = service
@@ -200,7 +201,6 @@ class TransferServiceGlacier(TransferBase):
                     raise Exception("Internal Error: Glacier client is not set")
         self.rich_console.print(f"Archive ID: [bold green]{complete_status['archiveId']}")
 
-
     def __init_upload(self, file_name:str, vault:str, region:str) -> Tuple[str, str]:
         if self.dryrun:
             self.rich_console.print(f"DRY RUN: Uploading {file_name} to Glacier vault {vault} in {region} region with {self.upload_size} byte parts")
@@ -220,21 +220,21 @@ class TransferServiceGlacier(TransferBase):
         self.cancel_uuid = self.cancel_service.subscribe_to_cancel_event(self.cancel_upload, vault, creation_response['uploadId'], self_reference=self)
         return creation_response['uploadId'] , creation_response['location']
 
-    def __upload_consumer(self, queue: multiprocessing.Queue[Any], upload_id: str, vault: str, status: multiprocessing.Queue[str]) -> None:
+    def __upload_consumer(self, queue: "mp.Queue[dict[str, Union[str, int, bytes]]]", upload_id: str, vault: str, status_queue: "mp.Queue[str]") -> None:
         try:
             while True:
                 if queue.empty():
-                    status.put("waiting")
+                    status_queue.put("waiting")
                     time.sleep(1)
                     continue
                 data = queue.get()
-                if data == "finish":
-                    queue.put("finish")
-                    status.put("finished")
+                if data["range"] == "finish":
+                    queue.put({"range": "finish", "part": 0, "data": b""}) # add it again to the queue to notify the other consumers
+                    status_queue.put("finished")
                     break
                 if not isinstance(data, dict) or not isinstance(data["data"], bytes) or not isinstance(data["range"], str) or not isinstance(data["part"], int):
                     continue
-                status.put(f"uploading Part {str(data["part"] + 1)}")
+                status_queue.put(f"uploading Part {str(data["part"] + 1)}")
                 try:
                     if self.glacier_client:
                         self.glacier_client.upload_multipart_part(
@@ -255,12 +255,12 @@ class TransferServiceGlacier(TransferBase):
         upload_total_size_in_bytes = 0
         creater = CreateSplittedFilesFromGenerator()
         uploaded_parts = 0
-        queue: multiprocessing.Queue[Any] = multiprocessing.Queue()
-        status_1: multiprocessing.Queue[str] = multiprocessing.Queue()
-        status_2: multiprocessing.Queue[str] = multiprocessing.Queue()
-        self.upload_consumer_status_reporter = multiprocessing.Process(target=self.__upload_consumer_status_reporter, args=([status_1, status_2],))
-        self.upload_consumer_process_1 = multiprocessing.Process(target=self.__upload_consumer, args=(queue, upload_id, vault, status_1))
-        self.upload_consumer_process_2 = multiprocessing.Process(target=self.__upload_consumer, args=(queue, upload_id, vault, status_2))
+        queue: mp.Queue[dict[str, Union[str, int, bytes]]] = mp.Queue()
+        status_queue_1: mp.Queue[str] = mp.Queue()
+        status_queue_2: mp.Queue[str] = mp.Queue()
+        self.upload_consumer_status_reporter = mp.Process(target=self.__upload_consumer_status_reporter, args=([status_queue_1, status_queue_2],))
+        self.upload_consumer_process_1 = mp.Process(target=self.__upload_consumer, args=(queue, upload_id, vault, status_queue_1))
+        self.upload_consumer_process_2 = mp.Process(target=self.__upload_consumer, args=(queue, upload_id, vault, status_queue_2))
         self.upload_consumer_process_1.start()
         self.upload_consumer_process_2.start()
         self.upload_consumer_status_reporter.start()
@@ -285,13 +285,13 @@ class TransferServiceGlacier(TransferBase):
             except KeyboardInterrupt:
                 return -1
             uploaded_parts += 1
-        queue.put("finish")
+        queue.put({"range": "finish", "part": 0, "data": b""})
         self.upload_consumer_process_1.join()
         self.upload_consumer_process_2.join()
         self.upload_consumer_status_reporter.join()
         return upload_total_size_in_bytes
 
-    def __upload_consumer_status_reporter(self, status_queues: list[multiprocessing.Queue[str]]) -> None:
+    def __upload_consumer_status_reporter(self, status_queues: "list[mp.Queue[str]]") -> None:
         try:
             with self.rich_console.status("") as status:
                 old_values = ["" for _ in status_queues]
