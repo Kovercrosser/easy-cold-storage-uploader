@@ -1,7 +1,6 @@
 from datetime import datetime
 import hashlib
 import multiprocessing as mp
-from multiprocessing import Queue
 from io import BufferedRandom
 import tempfile
 import time
