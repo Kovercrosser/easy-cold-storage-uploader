@@ -11,6 +11,8 @@ class Service:
         self.transfer_service = None
         self.rich_console = None
         self.cancel_service = None
+        self.db_uploads_service = None
+        self.db_downloads_service = None
 
     def set_service(self, service_ref: Any, service_name: str) -> None:
         if service_ref is None:

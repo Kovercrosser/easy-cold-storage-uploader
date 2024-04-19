@@ -16,7 +16,7 @@ class TransferBase(ABC):
         return filetype_service.get_extension() + compression_service.get_extension() + encryption_service.get_extension()
 
     @abstractmethod
-    def upload(self, data: Generator[bytes,None,None]) -> tuple[bool, Any]:
+    def upload(self, data: Generator[bytes,None,None]) -> tuple[bool, str, Any]:
         pass
 
     @abstractmethod

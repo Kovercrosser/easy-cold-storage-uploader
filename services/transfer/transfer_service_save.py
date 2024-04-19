@@ -9,7 +9,7 @@ class TransferServiceSave(TransferBase):
         self.service = service
         super().__init__()
 
-    def upload(self, data: Generator[bytes,None,None]) -> tuple[bool, Any]:
+    def upload(self, data: Generator[bytes,None,None]) -> tuple[bool, str, Any]:
         date:str = datetime.now().strftime("%Y-%m-%d")
         file_name:str = date + self.get_file_extension(self.service)
         size:int = 0

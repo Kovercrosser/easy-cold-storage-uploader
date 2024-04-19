@@ -3,6 +3,7 @@ from dependency_injection.service import Service
 from services.compression.compression_service_none import CompressionServiceNone
 from services.compression.compression_service_bzip2 import CompressionServiceBzip2
 from services.compression.compression_service_lzma import CompressionServiceLzma
+from services.db_service import DbService
 from services.encryption.encryption_service_none import EncryptionServiceNone
 from services.encryption.encryption_service_aes import EncryptionServiceAes
 from services.encryption.encryption_service_rsa import EncryptionServiceRsa
@@ -49,6 +50,8 @@ def setup_factory_from_parameters(
 
     service.set_service(Console(), "rich_console")
     service.set_service(CancelService(), "cancel_service")
+    service.set_service(DbService("uploads.json"), "db_uploads_service")
+    service.set_service(DbService("downloads.json"), "db_downloads_service")
 
 def setup_factory_from_storage(service: Service, profile: str = "default") -> None:
     if read_settings("global", "setup") is None:

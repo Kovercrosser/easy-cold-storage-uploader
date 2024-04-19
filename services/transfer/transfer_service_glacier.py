@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime
 import hashlib
 import multiprocessing as mp
 from io import BufferedRandom
@@ -59,7 +59,7 @@ class TransferServiceGlacier(TransferBase):
             self.hashes.append(hashlib.sha256(data).digest())
         file.seek(0)
 
-    def upload(self, data: Generator[bytes,None,None]) -> tuple[bool, Any]:
+    def upload(self, data: Generator[bytes,None,None]) -> tuple[bool, str, Any]:
         region:str | None = read_settings("default", "region")
         vault:str | None = read_settings("default", "vault")
         if None in [region, vault]:
@@ -67,7 +67,7 @@ class TransferServiceGlacier(TransferBase):
         self.glacier_client = boto3.client('glacier', region_name=region)
         self.cancel_service = self.service.get_service("cancel_service")
         self.rich_console = self.service.get_service("rich_console")
-        file_name:str = datetime.now().strftime("%Y-%m-%d") + self.get_file_extension(self.service)
+        file_name:str = datetime.datetime.now().strftime("%Y-%m-%d") + self.get_file_extension(self.service)
         assert region is not None
         assert vault is not None
         upload_id, location = self.__init_upload(file_name=file_name, vault=vault, region=region)
@@ -90,13 +90,13 @@ class TransferServiceGlacier(TransferBase):
             if self.cancel_uuid:
                 self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
             self.glacier_client = None
-            return False, None
+            return False, "", None
         if upload_total_size_in_bytes == -1:
             self.cancel_upload("User Interrupt", vault, upload_id)
             if self.cancel_uuid:
                 self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
             self.glacier_client = None
-            return False, None
+            return False, "", None
         # Finish the upload
         try:
             archive_id, checksum = self.__finish_upload(upload_id, vault, upload_total_size_in_bytes)
@@ -107,13 +107,12 @@ class TransferServiceGlacier(TransferBase):
             if self.cancel_uuid:
                 self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
             self.glacier_client = None
-            return False, None
+            return False, "", None
         self.glacier_client = None
-        return True, {"type": "aws_glacier", "upload_timestamp":  time.time(),"information":
-                        { "dryrun": self.dryrun, "region": region, "vault": vault, "file_name": file_name,
+        return True, "aws_glacier", { "dryrun": self.dryrun, "region": region, "vault": vault, "file_name": file_name,
                         "archive_id": archive_id, "checksum": checksum,
                         "size_in_bytes": upload_total_size_in_bytes, "human_readable_size": human_readable_size(upload_total_size_in_bytes),
-                        "upload_id": upload_id, "location": location }}
+                        "upload_id": upload_id, "location": location }
 
     def __finish_upload(self, upload_id: str, vault: str, upload_total_size_in_bytes: int) -> tuple[str, str]:
         checksum = compute_sha256_tree_hash_for_aws(self.hashes)
@@ -249,7 +248,7 @@ class TransferServiceGlacier(TransferBase):
                         old_value = old_values[i]
                         old_values[i] = new_value
                         if old_value and old_value != "waiting":
-                            self.rich_console.print(f"[purple][{datetime.now().strftime('%H:%M:%S')}][/purple] {old_value.replace("uploading ", "")} finished")
+                            self.rich_console.print(f"[purple][{datetime.datetime.now().strftime('%H:%M:%S')}][/purple] {old_value.replace("uploading ", "")} finished")
                 table = Table(show_header=True, header_style="bold magenta")
                 table.add_column("Worker", justify="center")
                 table.add_column("Status", justify="center")
