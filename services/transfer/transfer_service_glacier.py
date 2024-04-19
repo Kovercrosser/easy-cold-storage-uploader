@@ -18,7 +18,7 @@ from utils.storage_utils import read_settings
 
 def human_readable_size(size: int) -> str:
     sizef = float(size)
-    for unit in ("", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB"):
+    for unit in ("B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB"):
         if abs(sizef) < 1024.0:
             return f"{sizef:3.1f} {unit}"
         sizef /= 1024.0
