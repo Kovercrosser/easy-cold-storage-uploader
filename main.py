@@ -2,6 +2,7 @@
 import argparse
 import sys
 from rich import print as printx
+import rich
 from dependency_injection.main_factory import setup_factory_from_parameters
 from dependency_injection.service import Service
 from profile_setup import setup
@@ -84,9 +85,13 @@ if __name__ == "__main__":
         printx("\n\nProgram terminated by user. Exiting...", flush=True)
         try:
             cancel_service: CancelService = service.get_service("cancel_service")
-            cancel_service.cancel("user termination")
         except ValueError:
             pass
+        new_console = rich.console.Console()
+        new_console.clear()
+        with new_console.status("[bold red]Program terminated by user. Exiting...[/bold red]"):
+            if cancel_service:
+                cancel_service.cancel("user termination")
         sys.exit(0)
     except Exception as exception:
         printx("Stacktrace:")

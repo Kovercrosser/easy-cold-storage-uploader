@@ -148,6 +148,8 @@ class TransferServiceGlacier(TransferBase):
         # Upload the parts
         try:
             upload_total_size_in_bytes: int = self.__upload_parts(data, upload_id, vault)
+        except KeyboardInterrupt as e:
+            raise e
         except Exception:
             self.rich_console.print("[bold red]Error during upload")
             self.rich_console.print_exception()
@@ -248,7 +250,7 @@ class TransferServiceGlacier(TransferBase):
                 except Exception:
                     self.rich_console.print("[bold red]Error during a part upload.")
                     self.rich_console.print_exception()
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, SystemExit):
             return
 
     def __upload_parts(self, data: Generator[bytes,None,None], upload_id: str, vault: str) -> int:
@@ -260,30 +262,29 @@ class TransferServiceGlacier(TransferBase):
         status_queue_2: mp.Queue[str] = mp.Queue()
         self.upload_consumer_status_reporter = mp.Process(target=self.__upload_consumer_status_reporter, args=([status_queue_1, status_queue_2],))
         self.upload_consumer_process_1 = mp.Process(target=self.__upload_consumer, args=(queue, upload_id, vault, status_queue_1))
+        self.upload_consumer_process_1.daemon = True
         self.upload_consumer_process_2 = mp.Process(target=self.__upload_consumer, args=(queue, upload_id, vault, status_queue_2))
+        self.upload_consumer_process_2.daemon = True
         self.upload_consumer_process_1.start()
         self.upload_consumer_process_2.start()
         self.upload_consumer_status_reporter.start()
         while True:
-            try:
-                with tempfile.TemporaryFile(mode="b+w") as temp_file:
-                    while queue.qsize() > 1:
-                        time.sleep(0.5)
-                    try:
-                        creater.create_next_upload_size_part(data, self.upload_size, temp_file)
-                        self.add_to_hash_list(temp_file)
-                    except StopIteration:
-                        temp_file.close()
-                        break
-                    temp_file_size = get_file_size(temp_file)
-                    if not self.dryrun:
-                        queue.put({
-                            "range": f"bytes {uploaded_parts * self.upload_size}-{(uploaded_parts * self.upload_size) + temp_file_size - 1}/*",
-                            "part": uploaded_parts,
-                            "data": temp_file.read()})
-                    upload_total_size_in_bytes += temp_file_size
-            except KeyboardInterrupt:
-                return -1
+            with tempfile.TemporaryFile(mode="b+w") as temp_file:
+                while queue.qsize() > 1:
+                    time.sleep(0.5)
+                try:
+                    creater.create_next_upload_size_part(data, self.upload_size, temp_file)
+                    self.add_to_hash_list(temp_file)
+                except StopIteration:
+                    temp_file.close()
+                    break
+                temp_file_size = get_file_size(temp_file)
+                if not self.dryrun:
+                    queue.put({
+                        "range": f"bytes {uploaded_parts * self.upload_size}-{(uploaded_parts * self.upload_size) + temp_file_size - 1}/*",
+                        "part": uploaded_parts,
+                        "data": temp_file.read()})
+                upload_total_size_in_bytes += temp_file_size
             uploaded_parts += 1
         queue.put({"range": "finish", "part": 0, "data": b""})
         self.upload_consumer_process_1.join()
@@ -292,51 +293,52 @@ class TransferServiceGlacier(TransferBase):
         return upload_total_size_in_bytes
 
     def __upload_consumer_status_reporter(self, status_queues: "list[mp.Queue[str]]") -> None:
-        try:
-            with self.rich_console.status("") as status:
-                old_values = ["" for _ in status_queues]
-                finished: int = 0
-                while True:
-                    new_values = []
-                    for queue in status_queues:
-                        if not queue.empty():
-                            new_values.append(queue.get())
-                        else:
-                            new_values.append("")
-                    for i, new_value in enumerate(new_values):
-                        if new_value:
-                            if new_value == "finished":
-                                finished += 1
-                            old_value = old_values[i]
-                            old_values[i] = new_value
-                            if old_value and old_value != "waiting":
-                                self.rich_console.print(f"[purple][{datetime.now().strftime('%H:%M:%S')}][/purple] {old_value.replace("uploading ", "")} finished")
-                    table = Table(show_header=True, header_style="bold magenta")
-                    table.add_column("Worker", justify="center")
-                    table.add_column("Status", justify="center")
-                    for index, value in enumerate(old_values):
-                        table.add_row(f"{index + 1}", value, style="bold green")
-                    status.update(table)
-                    if finished == len(status_queues):
-                        break
-                    time.sleep(0.1)
-        except KeyboardInterrupt:
-            return
+        with self.rich_console.status("") as status:
+            old_values = ["" for _ in status_queues]
+            finished: int = 0
+            while True:
+                new_values = []
+                for queue in status_queues:
+                    if not queue.empty():
+                        new_values.append(queue.get())
+                    else:
+                        new_values.append("")
+                for i, new_value in enumerate(new_values):
+                    if new_value:
+                        if new_value == "finished":
+                            finished += 1
+                        old_value = old_values[i]
+                        old_values[i] = new_value
+                        if old_value and old_value != "waiting":
+                            self.rich_console.print(f"[purple][{datetime.now().strftime('%H:%M:%S')}][/purple] {old_value.replace("uploading ", "")} finished")
+                table = Table(show_header=True, header_style="bold magenta")
+                table.add_column("Worker", justify="center")
+                table.add_column("Status", justify="center")
+                for index, value in enumerate(old_values):
+                    table.add_row(f"{index + 1}", value, style="bold green")
+                status.update(table)
+                if finished == len(status_queues):
+                    break
+                time.sleep(0.1)
 
     def cancel_upload(self, reason: str, vault: str = "", upload_id: str = "") -> None:
         self.cancel_uuid = None
         if not self.dryrun:
             if self.upload_consumer_process_1:
-                self.upload_consumer_process_1.terminate()
+                print("Terminating Process 1")
+                self.upload_consumer_process_1.kill()
                 self.upload_consumer_process_1 = None
             if self.upload_consumer_process_2:
-                self.upload_consumer_process_2.terminate()
+                print("Terminating Process 2")
+                self.upload_consumer_process_2.kill()
                 self.upload_consumer_process_2 = None
             if self.upload_consumer_status_reporter:
-                self.upload_consumer_status_reporter.terminate()
+                print("Terminating Status Reporter")
+                self.upload_consumer_status_reporter.kill()
                 self.upload_consumer_status_reporter = None
             if vault == "" or upload_id == "":
                 if self.glacier_client:
+                    print("Aborting all uploads")
                     self.glacier_client.abort_multipart_upload(vaultName=vault, uploadId=upload_id)
                     self.rich_console.print(f"[bold red]Uploaded Parts removed on remote because of {reason}.")
 
