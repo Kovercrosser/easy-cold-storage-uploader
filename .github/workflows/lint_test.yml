@@ -22,8 +22,8 @@ jobs:
 
     - name: Install protoc
       run: |
-        apt-get update
-        apt-get install -y libprotobuf-dev libprotoc-bin protobuf-compiler
+        sudo apt-get update
+        sudo apt-get install -y libprotobuf-dev libprotoc-bin protobuf-compiler
 
     - name: Install Poetry
       run: |
