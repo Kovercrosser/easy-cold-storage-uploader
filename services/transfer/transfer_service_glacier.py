@@ -72,12 +72,6 @@ class TransferServiceGlacier(TransferBase):
         assert vault is not None
         upload_id, location = self.__init_upload(file_name=file_name, vault=vault, region=region)
 
-        table = Table(show_header=True, header_style="bold magenta")
-        table.add_column("Upload ID", style="dim")
-        table.add_column("Location", style="dim")
-        table.add_row(upload_id, location)
-        self.rich_console.print(table)
-
         # Upload the parts
         try:
             upload_total_size_in_bytes: int = self.__upload_parts(data, upload_id, vault)
