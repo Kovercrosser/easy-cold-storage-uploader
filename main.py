@@ -92,7 +92,6 @@ if __name__ == "__main__":
         with new_console.status("[bold red]Program terminated by user. Exiting...[/bold red]"):
             if cancel_service:
                 cancel_service.cancel("user termination")
-        sys.exit(0)
     except Exception as exception:
         printx("Stacktrace:")
         printx("\n")

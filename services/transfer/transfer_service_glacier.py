@@ -2,6 +2,7 @@ from datetime import datetime
 import hashlib
 import multiprocessing as mp
 from io import BufferedRandom
+import sys
 import tempfile
 import time
 from typing import Generator, Tuple, Union
@@ -12,75 +13,9 @@ from rich.table import Table
 from dependency_injection.service import Service
 from services.cancel_service import CancelService
 from services.transfer.transfer_base import TransferBase
+from utils.data_utils import CreateSplittedFilesFromGenerator
 from utils.hash_utils import compute_sha256_tree_hash_for_aws
 from utils.storage_utils import read_settings
-
-class CreateSplittedFilesFromGenerator:
-    """
-    This Class  is used to create parts of a file from a generator.
-    It is similar to a Generator but gives out the chunks in a file of a given size, instead of yielding the chunks.
-    """
-    remaining_bytes_from_last_part: bytes = bytes()
-    generator_exhausted: bool = False
-    total_read_bytes: int = 0
-    total_written_bytes: int = 0
-
-    def create_next_upload_size_part(self, data: Generator[bytes,None,None], upload_size_bytes: int, temp_file: BufferedRandom) -> None:
-        """
-        This function reads data from a generator and writes it to a temporary file of a given size.
-        
-        :param data: Generator that yields bytes
-        :param upload_size_bytes: Size of the part to be written to the temporary file
-        :param temp_file: Temporary file to write the data to
-        """
-        current_written_bytes = 0
-
-        if not temp_file:
-            raise ValueError("tempFile is not set")
-        if upload_size_bytes <= 0:
-            raise ValueError("uploadSizeBytes must be greater than 0")
-
-        chunk: bytes = bytes()
-        while True:
-            try:
-                chunk = next(data)
-                self.total_read_bytes += len(chunk)
-            except StopIteration as exception:
-                self.generator_exhausted = True
-                if self.remaining_bytes_from_last_part == b"" and len(chunk) == 0:
-                    raise exception
-
-            if len(self.remaining_bytes_from_last_part) > upload_size_bytes:
-                temp_file.write(self.remaining_bytes_from_last_part[:upload_size_bytes])
-                current_written_bytes += upload_size_bytes
-                self.total_written_bytes += upload_size_bytes
-                self.remaining_bytes_from_last_part = self.remaining_bytes_from_last_part[upload_size_bytes:]
-                temp_file.seek(0)
-                return
-
-            # now self.remainingBytesFromLastPart is empty or smaller then uploadSizeBytes
-
-            temp_file.write(self.remaining_bytes_from_last_part)
-            current_written_bytes += len(self.remaining_bytes_from_last_part)
-            self.total_written_bytes += len(self.remaining_bytes_from_last_part)
-            self.remaining_bytes_from_last_part = bytes()
-            max_write_size_allowed = upload_size_bytes - current_written_bytes
-
-            if chunk:
-                if len(chunk) > max_write_size_allowed:
-                    temp_file.write(chunk[:max_write_size_allowed])
-                    self.remaining_bytes_from_last_part = chunk[max_write_size_allowed:]
-                    current_written_bytes += max_write_size_allowed
-                    self.total_written_bytes += max_write_size_allowed
-                    temp_file.seek(0)
-                    return
-                temp_file.write(chunk)
-                current_written_bytes += len(chunk)
-                self.total_written_bytes += len(chunk)
-
-            if self.remaining_bytes_from_last_part == b"" and self.generator_exhausted:
-                temp_file.seek(0)
-                return
 
 def human_readable_size(size: int) -> str:
     sizef = float(size)
@@ -102,7 +37,7 @@ class TransferServiceGlacier(TransferBase):
     dryrun: bool
     hashes: list[bytes] = []
     cancel_service: CancelService
-    rich_console: Console
+    rich_console: Console 
     glacier_client = None
     cancel_uuid: uuid.UUID | None = None
     upload_consumer_process_1: mp.Process | None = None
@@ -222,35 +157,32 @@ class TransferServiceGlacier(TransferBase):
         return creation_response['uploadId'] , creation_response['location']
 
     def __upload_consumer(self, queue: "mp.Queue[dict[str, Union[str, int, bytes]]]", upload_id: str, vault: str, status_queue: "mp.Queue[str]") -> None:
-        try:
-            while True:
-                if queue.empty():
-                    status_queue.put("waiting")
-                    time.sleep(1)
-                    continue
-                data = queue.get()
-                if data["range"] == "finish":
-                    queue.put({"range": "finish", "part": 0, "data": b""}) # add it again to the queue to notify the other consumers
-                    status_queue.put("finished")
-                    break
-                if not isinstance(data, dict) or not isinstance(data["data"], bytes) or not isinstance(data["range"], str) or not isinstance(data["part"], int):
-                    continue
-                status_queue.put(f"uploading Part {str(data["part"] + 1)}")
-                try:
-                    if self.glacier_client:
-                        self.glacier_client.upload_multipart_part(
-                            vaultName=vault,
-                            uploadId=upload_id,
-                            body=data["data"],
-                            range=data["range"]
-                        )
-                    else:
-                        raise Exception("Internal Error: Glacier client is not set")
-                except Exception:
-                    self.rich_console.print("[bold red]Error during a part upload.")
-                    self.rich_console.print_exception()
-        except (KeyboardInterrupt, SystemExit):
-            return
+        while True:
+            if queue.empty():
+                status_queue.put("waiting")
+                time.sleep(1)
+                continue
+            data = queue.get()
+            if data["range"] == "finish":
+                queue.put({"range": "finish", "part": 0, "data": b""}) # add it again to the queue to notify the other consumers
+                status_queue.put("finished")
+                break
+            if not isinstance(data, dict) or not isinstance(data["data"], bytes) or not isinstance(data["range"], str) or not isinstance(data["part"], int):
+                continue
+            status_queue.put(f"uploading Part {str(data["part"] + 1)}")
+            try:
+                if self.glacier_client:
+                    self.glacier_client.upload_multipart_part(
+                        vaultName=vault,
+                        uploadId=upload_id,
+                        body=data["data"],
+                        range=data["range"]
+                    )
+                else:
+                    raise Exception("Internal Error: Glacier client is not set")
+            except Exception:
+                self.rich_console.print("[bold red]Error during a part upload.")
+                self.rich_console.print_exception()
 
     def __upload_parts(self, data: Generator[bytes,None,None], upload_id: str, vault: str) -> int:
         upload_total_size_in_bytes = 0
@@ -260,6 +192,7 @@ class TransferServiceGlacier(TransferBase):
         status_queue_1: mp.Queue[str] = mp.Queue()
         status_queue_2: mp.Queue[str] = mp.Queue()
         self.upload_consumer_status_reporter = mp.Process(target=self.__upload_consumer_status_reporter, args=([status_queue_1, status_queue_2],))
+        self.upload_consumer_status_reporter.daemon = True
         self.upload_consumer_process_1 = mp.Process(target=self.__upload_consumer, args=(queue, upload_id, vault, status_queue_1))
         self.upload_consumer_process_1.daemon = True
         self.upload_consumer_process_2 = mp.Process(target=self.__upload_consumer, args=(queue, upload_id, vault, status_queue_2))
@@ -290,6 +223,7 @@ class TransferServiceGlacier(TransferBase):
         self.upload_consumer_process_2.join()
         self.upload_consumer_status_reporter.join()
         return upload_total_size_in_bytes
+
 
     def __upload_consumer_status_reporter(self, status_queues: "list[mp.Queue[str]]") -> None:
         with self.rich_console.status("") as status:
@@ -325,15 +259,15 @@ class TransferServiceGlacier(TransferBase):
         if not self.dryrun:
             if self.upload_consumer_process_1:
                 print("Terminating Process 1")
-                self.upload_consumer_process_1.kill()
+                self.upload_consumer_process_1.close()
                 self.upload_consumer_process_1 = None
             if self.upload_consumer_process_2:
                 print("Terminating Process 2")
-                self.upload_consumer_process_2.kill()
+                self.upload_consumer_process_2.terminate()
                 self.upload_consumer_process_2 = None
             if self.upload_consumer_status_reporter:
                 print("Terminating Status Reporter")
-                self.upload_consumer_status_reporter.kill()
+                self.upload_consumer_status_reporter.terminate()
                 self.upload_consumer_status_reporter = None
             if vault == "" or upload_id == "":
                 if self.glacier_client:
