@@ -36,7 +36,7 @@ class TransferServiceGlacier(TransferBase):
     dryrun: bool
     hashes: list[bytes] = []
     cancel_service: CancelService
-    rich_console: Console 
+    rich_console: Console
     glacier_client = None
     cancel_uuid: uuid.UUID | None = None
     upload_consumer_process_1: mp.Process | None = None

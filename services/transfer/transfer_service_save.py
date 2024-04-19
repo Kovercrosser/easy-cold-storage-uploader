@@ -21,9 +21,9 @@ class TransferServiceSave(TransferBase):
                     file.write(chunk)
         except (FileExistsError, FileNotFoundError) as exception:
             print(f"An error occurred while writing to {file_name}. {exception}")
-            return False, None
+            return False, "", None
         print(f"Upload complete. {size} bytes written to {file_name}")
-        return True, {"file_name": file_name, "size": size}
+        return True, "save_to_disc", {"file_name": file_name, "size": size}
 
     def download(self, data: Generator[bytes,None,None]) -> bool:
         raise NotImplementedError("Downloading files isnt currently supported.")
