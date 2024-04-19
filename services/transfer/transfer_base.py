@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Generator
+from typing import Any, Generator
+
 from dependency_injection.service import Service
 from services.compression.compression_base import CompressionBase
 from services.encryption.encryption_base import EncryptionBase
@@ -15,7 +16,7 @@ class TransferBase(ABC):
         return filetype_service.get_extension() + compression_service.get_extension() + encryption_service.get_extension()
 
     @abstractmethod
-    def upload(self, data: Generator[bytes,None,None]) -> bool:
+    def upload(self, data: Generator[bytes,None,None]) -> tuple[bool, Any]:
         pass
 
     @abstractmethod

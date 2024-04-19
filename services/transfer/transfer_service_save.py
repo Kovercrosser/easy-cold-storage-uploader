@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Generator
+from typing import Any, Generator
 from dependency_injection.service import Service
 from services.transfer.transfer_base import TransferBase
 
@@ -9,7 +9,7 @@ class TransferServiceSave(TransferBase):
         self.service = service
         super().__init__()
 
-    def upload(self, data: Generator[bytes,None,None]) -> bool:
+    def upload(self, data: Generator[bytes,None,None]) -> tuple[bool, Any]:
         date:str = datetime.now().strftime("%Y-%m-%d")
         file_name:str = date + self.get_file_extension(self.service)
         size:int = 0
@@ -21,9 +21,9 @@ class TransferServiceSave(TransferBase):
                     file.write(chunk)
         except (FileExistsError, FileNotFoundError) as exception:
             print(f"An error occurred while writing to {file_name}. {exception}")
-            return False
+            return False, None
         print(f"Upload complete. {size} bytes written to {file_name}")
-        return True
+        return True, {"file_name": file_name, "size": size}
 
     def download(self, data: Generator[bytes,None,None]) -> bool:
         raise NotImplementedError("Downloading files isnt currently supported.")

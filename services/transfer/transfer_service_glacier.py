@@ -2,10 +2,9 @@ from datetime import datetime
 import hashlib
 import multiprocessing as mp
 from io import BufferedRandom
-import sys
 import tempfile
 import time
-from typing import Generator, Tuple, Union
+from typing import Any, Generator, Tuple, Union
 import uuid
 import boto3
 from rich.console import Console
@@ -60,7 +59,7 @@ class TransferServiceGlacier(TransferBase):
             self.hashes.append(hashlib.sha256(data).digest())
         file.seek(0)
 
-    def upload(self, data: Generator[bytes,None,None]) -> bool:
+    def upload(self, data: Generator[bytes,None,None]) -> tuple[bool, Any]:
         region:str | None = read_settings("default", "region")
         vault:str | None = read_settings("default", "vault")
         if None in [region, vault]:
@@ -91,16 +90,16 @@ class TransferServiceGlacier(TransferBase):
             if self.cancel_uuid:
                 self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
             self.glacier_client = None
-            return False
+            return False, None
         if upload_total_size_in_bytes == -1:
             self.cancel_upload("User Interrupt", vault, upload_id)
             if self.cancel_uuid:
                 self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
             self.glacier_client = None
-            return False
+            return False, None
         # Finish the upload
         try:
-            self.__finish_upload(upload_id, vault, upload_total_size_in_bytes)
+            archive_id, checksum = self.__finish_upload(upload_id, vault, upload_total_size_in_bytes)
         except Exception:
             self.rich_console.print("[bold red]Error during finishing the upload")
             self.rich_console.print_exception()
@@ -108,11 +107,15 @@ class TransferServiceGlacier(TransferBase):
             if self.cancel_uuid:
                 self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
             self.glacier_client = None
-            return False
+            return False, None
         self.glacier_client = None
-        return True
+        return True, {"type": "aws_glacier", "upload_timestamp":  time.time(),"information":
+                        { "dryrun": self.dryrun, "region": region, "vault": vault, "file_name": file_name,
+                        "archive_id": archive_id, "checksum": checksum,
+                        "size_in_bytes": upload_total_size_in_bytes, "human_readable_size": human_readable_size(upload_total_size_in_bytes),
+                        "upload_id": upload_id, "location": location }}
 
-    def __finish_upload(self, upload_id: str, vault: str, upload_total_size_in_bytes: int) -> None:
+    def __finish_upload(self, upload_id: str, vault: str, upload_total_size_in_bytes: int) -> tuple[str, str]:
         checksum = compute_sha256_tree_hash_for_aws(self.hashes)
         self.hashes = []
         if checksum == "" or checksum is None:
@@ -135,7 +138,10 @@ class TransferServiceGlacier(TransferBase):
                     )
                 else:
                     raise Exception("Internal Error: Glacier client is not set")
-        self.rich_console.print(f"Archive ID: [bold green]{complete_status['archiveId']}")
+        archive_id = complete_status['archiveId']
+        assert archive_id is not None and isinstance(archive_id, str)
+        self.rich_console.print(f"Archive ID: [bold green]{archive_id}")
+        return archive_id, checksum
 
     def __init_upload(self, file_name:str, vault:str, region:str) -> Tuple[str, str]:
         if self.dryrun:
@@ -226,7 +232,7 @@ class TransferServiceGlacier(TransferBase):
 
 
     def __upload_consumer_status_reporter(self, status_queues: "list[mp.Queue[str]]") -> None:
-        with self.rich_console.status("") as status:
+        with self.rich_console.status("", spinner="pong") as status:
             old_values = ["" for _ in status_queues]
             finished: int = 0
             while True:
