@@ -32,7 +32,7 @@ def upload(service: Service, profile: str, paths: list[str]) -> int:
     encrypted_generator = encryption_service.encrypt(compressed_generator, "")
     uplaod_status, upload_service, upload_information = transfer_service.upload(encrypted_generator)
 
-    db_information = {"type": upload_service, "upload_datetime_utc":  datetime.datetime.now(datetime.UTC),"information": upload_information}
+    db_information = {"type": upload_service, "upload_datetime_utc":  str(datetime.datetime.now(datetime.UTC)),"information": upload_information}
 
     if uplaod_status:
         db_uploads_service.get_context().insert(db_information)
