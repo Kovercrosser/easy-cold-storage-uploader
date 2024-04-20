@@ -16,16 +16,6 @@ jobs:
         with:
           python-version-file: pyproject.toml
 
-      - name: Install Bazel
-        uses: bazel-contrib/setup-bazel@0.8.1
-        with:
-          bazelisk-cache: true
-          disk-cache: ${{ github.workflow }}
-          repository-cache: true
-
-      - name: Install Protoc
-        uses: arduino/setup-protoc@v3
-
       - name: Install Poetry
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
@@ -34,7 +24,6 @@ jobs:
         run: poetry install --no-interaction
 
       - name: Create Linux Release File
-        if: success() || failure() # Workaround for Error on job before
         run: poetry run pyinstaller --onefile main.py
       
       - name: Rename Exe
@@ -56,16 +45,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version-file: pyproject.toml
-
-      - name: Install Bazel
-        uses: bazel-contrib/setup-bazel@0.8.1
-        with:
-          bazelisk-cache: true
-          disk-cache: ${{ github.workflow }}
-          repository-cache: true
-
-      - name: Install Protoc
-        uses: arduino/setup-protoc@v3
 
       - name: Install Poetry
         run: pip install poetry
