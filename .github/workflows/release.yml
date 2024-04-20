@@ -34,6 +34,7 @@ jobs:
         run: poetry install --no-interaction
 
       - name: Create Linux Release File
+        if: success() || failure() # Workaround for Error on job before
         run: poetry run pyinstaller --onefile main.py
       
       - name: Rename Exe
