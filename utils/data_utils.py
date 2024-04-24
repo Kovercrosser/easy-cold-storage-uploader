@@ -51,10 +51,9 @@ class CreateSplittedFilesFromGenerator:
                         size = get_file_size(temp_file)
                         if size == 0:
                             raise exception
-                        else:
-                            temp_file.seek(0)
-                            self.has_returned = True
-                            return
+                        temp_file.seek(0)
+                        self.has_returned = True
+                        return
             else:
                 temp_file.write(self.remaining_bytes_from_last_part[:upload_size_bytes])
                 current_written_bytes += upload_size_bytes
