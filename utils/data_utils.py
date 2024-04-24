@@ -1,6 +1,11 @@
 from io import BufferedRandom
 from typing import Generator
 
+def get_file_size(temp_file: BufferedRandom) -> int:
+    temp_file.seek(0, 2)
+    size = temp_file.tell()
+    temp_file.seek(0)
+    return size
 
 class CreateSplittedFilesFromGenerator:
     """
@@ -29,9 +34,7 @@ class CreateSplittedFilesFromGenerator:
             raise ValueError("upload_size_bytes must be greater than 0")
 
         chunk: bytes = bytes()
-        itteration = 0
         while True:
-            itteration += 1
             if len(self.remaining_bytes_from_last_part) < upload_size_bytes:
                 try:
                     chunk = next(data)
@@ -40,12 +43,18 @@ class CreateSplittedFilesFromGenerator:
                         raise StopIteration
                 except StopIteration as exception:
                     self.generator_exhausted = True
-                    if self.remaining_bytes_from_last_part == b"" and len(chunk) == 0:
+                    if len(self.remaining_bytes_from_last_part) == 0 and len(chunk) == 0:
                         if not self.has_returned:
                             temp_file.seek(0)
                             self.has_returned = True
                             return
-                        raise exception
+                        size = get_file_size(temp_file)
+                        if size == 0:
+                            raise exception
+                        else:
+                            temp_file.seek(0)
+                            self.has_returned = True
+                            return
             else:
                 temp_file.write(self.remaining_bytes_from_last_part[:upload_size_bytes])
                 current_written_bytes += upload_size_bytes
