@@ -32,7 +32,7 @@ def setup_factory_from_parameters(
     if encryption == "None":
         service.set_service(EncryptionServiceNone(), "encryption_service")
     if encryption == "aes":
-        service.set_service(EncryptionServiceAes(), "encryption_service")
+        service.set_service(EncryptionServiceAes("Valeistdumm"), "encryption_service")
     if encryption == "rsa":
         service.set_service(EncryptionServiceRsa(), "encryption_service")
 
@@ -41,12 +41,12 @@ def setup_factory_from_parameters(
     if filetype == "tar":
         service.set_service(FiletypeServiceTar(), "filetype_service")
     if filetype == "zip":
-        service.set_service(FiletypeServiceZip(compression_level=0, chunk_size=2*1024), "filetype_service")
+        service.set_service(FiletypeServiceZip(compression_level=0, chunk_size=10*1024*1024), "filetype_service")
 
     if dryrun:
         service.set_service(TransferServiceSave(service), "transfer_service")
     else:
-        service.set_service(TransferServiceGlacier(service,  False, 4), "transfer_service")
+        service.set_service(TransferServiceGlacier(service,  False, 64), "transfer_service")
 
     service.set_service(Console(), "rich_console")
     service.set_service(CancelService(), "cancel_service")

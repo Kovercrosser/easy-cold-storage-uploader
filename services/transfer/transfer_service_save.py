@@ -25,5 +25,14 @@ class TransferServiceSave(TransferBase):
         print(f"Upload complete. {size} bytes written to {file_name}")
         return True, "save_to_disc", {"file_name": file_name, "size": size}
 
-    def download(self, data: Generator[bytes,None,None]) -> bool:
-        raise NotImplementedError("Downloading files isnt currently supported.")
+    def download(self, data: str) -> Generator[bytes,None,None]:
+        try:
+            with open(data, 'rb') as file:
+                while True:
+                    chunk = file.read(1024*1024*10)
+                    if not chunk:
+                        break
+                    yield chunk
+        except (FileExistsError, FileNotFoundError) as exception:
+            print(f"An error occurred while reading from the data. {exception}")
+            yield b""

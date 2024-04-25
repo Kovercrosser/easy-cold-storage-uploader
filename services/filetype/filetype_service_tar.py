@@ -5,7 +5,7 @@ class FiletypeServiceTar(FiletypeBase):
     def pack(self, files: list[str]) -> Generator[bytes,None,None]:
         raise NotImplementedError("Packing into a tar files isnt currently supported.")
 
-    def unpack(self, data: Generator[bytes,None,None]) -> None:
+    def unpack(self, data: Generator[bytes,None,None], save_location:str, filename:str) -> None:
         raise NotImplementedError("Unpacking tar files isnt currently supported.")
 
     def get_extension(self) -> str:

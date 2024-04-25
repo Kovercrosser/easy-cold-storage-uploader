@@ -3,6 +3,7 @@ from typing import Generator
 from stat import S_IFREG
 from datetime import datetime
 from stream_zip import stream_zip, ZIP_64, zlib # type: ignore
+from stream_unzip import stream_unzip
 from services.filetype.filetype_base import FiletypeBase
 
 
@@ -50,8 +51,10 @@ class FiletypeServiceZip(FiletypeBase):
         return zipped_chunks
 
 
-    def unpack(self, data: Generator[bytes,None,None]) -> None:
-        raise NotImplementedError("Unpacking zip files isnt currently supported.")
+    def unpack(self, data: Generator[bytes,None,None], save_location:str, filename:str) -> None:
+        with open(os.path.join(save_location, filename), 'wb') as f:
+            for chunk in data:
+                f.write(chunk)
 
     def get_extension(self) -> str:
         return ".zip"

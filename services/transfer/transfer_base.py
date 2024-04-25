@@ -20,5 +20,5 @@ class TransferBase(ABC):
         pass
 
     @abstractmethod
-    def download(self, data: Generator[bytes,None,None]) -> bool:
+    def download(self, data: str) -> Generator[bytes,None,None]:
         pass

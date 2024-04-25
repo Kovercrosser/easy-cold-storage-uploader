@@ -8,7 +8,7 @@ class FiletypeBase(ABC):
         pass
 
     @abstractmethod
-    def unpack(self, data:Generator[bytes,None,None])-> None:
+    def unpack(self, data:Generator[bytes,None,None], save_location:str, filename:str)-> None:
         pass
 
     @abstractmethod
