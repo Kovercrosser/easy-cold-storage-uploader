@@ -5,9 +5,9 @@ from services.compression.compression_base import CompressionBase
 from services.encryption.encryption_base import EncryptionBase
 from services.filetype.filetype_base import FiletypeBase
 from services.transfer.transfer_base import TransferBase
+from utils.console_utils import print_success
 
 def download(service: Service, profile: str, location:str, download_file:str) -> int:
-    rich_console = service.get_service("rich_console")
     transfer_service: TransferBase = service.get_service("transfer_service")
     compression_service: CompressionBase = service.get_service("compression_service")
     encryption_service: EncryptionBase = service.get_service("encryption_service")
@@ -18,5 +18,5 @@ def download(service: Service, profile: str, location:str, download_file:str) ->
     compressed_generator = compression_service.decompress(encrypted_generator)
     filetype_service.unpack(compressed_generator, location, Path(download_file).stem)
 
-    rich_console.print("[bold green]Download completed.")
+    print_success("[bold green]Download completed.")
     return 0

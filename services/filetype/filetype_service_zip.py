@@ -5,6 +5,7 @@ from datetime import datetime
 from stream_zip import stream_zip, ZIP_64, zlib # type: ignore
 from stream_unzip import stream_unzip
 from services.filetype.filetype_base import FiletypeBase
+from utils.console_utils import print_warning
 
 
 class FiletypeServiceZip(FiletypeBase):
@@ -52,6 +53,7 @@ class FiletypeServiceZip(FiletypeBase):
 
 
     def unpack(self, data: Generator[bytes,None,None], save_location:str, filename:str) -> None:
+        print_warning("Unziping is currently unsupported. It will save the zip file instead")
         with open(os.path.join(save_location, filename), 'wb') as f:
             for chunk in data:
                 f.write(chunk)

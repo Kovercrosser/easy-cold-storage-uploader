@@ -6,10 +6,10 @@ from services.encryption.encryption_base import EncryptionBase
 from services.filetype.filetype_base import FiletypeBase
 from services.transfer.transfer_base import TransferBase
 from utils.storage_utils import get_all_files_from_directories_and_files, read_settings
+from utils.console_utils import console, print_error, print_success
 
 
 def upload(service: Service, profile: str, paths: list[str]) -> int:
-    rich_console = service.get_service("rich_console")
     vault = read_settings(profile, "vault")
     transfer_service: TransferBase = service.get_service("transfer_service")
     compression_service: CompressionBase = service.get_service("compression_service")
@@ -18,13 +18,13 @@ def upload(service: Service, profile: str, paths: list[str]) -> int:
     db_uploads_service: DbService = service.get_service("db_uploads_service")
 
     # Get all files from the given paths
-    with rich_console.status("[bold green]Gathering information about the files..."):
+    with console.status("[bold green]Gathering information about the files..."):
         files = get_all_files_from_directories_and_files(paths)
     if len(files) == 0:
-        rich_console.print(f"[bold red]No files found in {paths}")
+        print_error(f"No files found in {paths}")
         return 1
     files_text = "files" if len(files) > 1 else "file"
-    rich_console.print(f"Trying to upload {len(files)} {files_text} to [bold purple]{vault}[/bold purple]"
+    console.print(f"Trying to upload {len(files)} {files_text} to [bold purple]{vault}[/bold purple]"
                         f" using profile: [bold purple]{profile}[/bold purple]")
 
     packed_generator = filetype_service.pack(files)
@@ -36,7 +36,7 @@ def upload(service: Service, profile: str, paths: list[str]) -> int:
 
     if uplaod_status:
         db_uploads_service.get_context().insert(db_information)
-        rich_console.print("[bold green]Upload completed.")
+        print_success("[bold green]Upload completed.")
         return 0
-    rich_console.print("[bold ]Upload failed.")
+    print_error("[bold ]Upload failed.")
     return 1

@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Any, Generator
 from dependency_injection.service import Service
 from services.transfer.transfer_base import TransferBase
+from utils.console_utils import print_error
 
 class TransferServiceSave(TransferBase):
     service: Service
@@ -17,12 +18,12 @@ class TransferServiceSave(TransferBase):
             with open(file_name, 'wb') as file:
                 for chunk in data:
                     size += len(chunk)
-                    print(f"Writing {len(chunk)} bytes to {file_name}")
+                    print_error(f"Writing {len(chunk)} bytes to {file_name}")
                     file.write(chunk)
         except (FileExistsError, FileNotFoundError) as exception:
-            print(f"An error occurred while writing to {file_name}. {exception}")
+            print_error(f"An error occurred while writing to {file_name}. {exception}")
             return False, "", None
-        print(f"Upload complete. {size} bytes written to {file_name}")
+        print_error(f"Upload complete. {size} bytes written to {file_name}")
         return True, "save_to_disc", {"file_name": file_name, "size": size}
 
     def download(self, data: str) -> Generator[bytes,None,None]:
@@ -34,5 +35,5 @@ class TransferServiceSave(TransferBase):
                         break
                     yield chunk
         except (FileExistsError, FileNotFoundError) as exception:
-            print(f"An error occurred while reading from the data. {exception}")
+            print_error(f"An error occurred while reading from the data. {exception}")
             yield b""

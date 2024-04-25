@@ -3,7 +3,7 @@ import boto3
 
 from utils.storage_utils import store_settings
 from utils.aws_utils import store_aws_credentials, check_aws_credentials
-from utils.console_utils import clear_console, force_user_input_from_list, force_user_input
+from utils.console_utils import clear_console, force_user_input_from_list, force_user_input, console
 
 def choose_region() -> str:
     session = boto3.Session()
@@ -23,7 +23,7 @@ def choose_vault(region: str) -> str:
     return choosen_vault
 
 def enter_api_keys() -> None:
-    print("Warning: Your API Key and API Secret Key will be stored in plain text in a local file under ~/.aws/credentials.")
+    console.print("Warning: Your API Key and API Secret Key will be stored in plain text in a local file under ~/.aws/credentials.")
     api_key = force_user_input("Enter your API Key:", None)
     api_secret_key = force_user_input("Enter your API Secret Key:", None)
     store_aws_credentials(api_key, api_secret_key)
@@ -39,19 +39,19 @@ def get_all_vault_names(region: str) -> list[str]:
 
 def create_vault(region: str) -> str:
     vaults = get_all_vault_names(region)
-    print("Enter the name of the new Vault:")
+    console.print("Enter the name of the new Vault:")
     while True:
         vault_name = input()
         if not re.match(r"^[a-zA-Z0-9-_]+$", vault_name):
-            print("Invalid vault name. Please use only alphanumeric characters, hyphens, and underscores.")
+            console.print("Invalid vault name. Please use only alphanumeric characters, hyphens, and underscores.")
         elif vault_name in vaults:
-            print("Vault already exists. Please choose another name.")
+            console.print("Vault already exists. Please choose another name.")
         else:
             break
-    print(f"\nYou chose {vault_name} as the name of your new Vault.")
+    console.print(f"\nYou chose {vault_name} as the name of your new Vault.")
     glacier_client = boto3.client('glacier', region_name=region)
     glacier_client.create_vault(vaultName=vault_name)
-    print(f"Vault {vault_name} has been created.")
+    console.print(f"Vault {vault_name} has been created.")
     input("Press Enter to continue...")
     return vault_name
 
@@ -77,38 +77,38 @@ def setup() -> None:
     clear_console("Setup Glacier Backup")
 
     if check_aws_credentials():
-        print("You already have AWS Credentials stored in ~/.aws/credentials.")
+        console.print("You already have AWS Credentials stored in ~/.aws/credentials.")
         result = force_user_input("Do you want to overwrite them? y/n", ["y", "n"])
         if result == "y":
             enter_api_keys()
             clear_console("Setup Glacier Backup")
-            print("Your Credentials have been stored in the file ~/.aws/credentials")
+            console.print("Your Credentials have been stored in the file ~/.aws/credentials")
         else:
             clear_console("Setup Glacier Backup")
     else:
         enter_api_keys()
         clear_console("Setup Glacier Backup")
-        print("Your Credentials have been stored in the file ~/.aws/credentials")
+        console.print("Your Credentials have been stored in the file ~/.aws/credentials")
 
     region = choose_region()
     clear_console("Setup Glacier Backup")
-    print(f"\nYou chose {region} as your Glacier Region.\n")
+    console.print(f"\nYou chose {region} as your Glacier Region.\n")
 
     choosen_vault = choose_vault(region)
     clear_console("Setup Glacier Backup")
-    print(f"\nYou chose {choosen_vault} as your Vault.\n")
+    console.print(f"\nYou chose {choosen_vault} as your Vault.\n")
 
     choosen_compression = choose_compression()
     clear_console("Setup Glacier Backup")
-    print(f"\nYou chose {choosen_compression} as your Compression Method.")
+    console.print(f"\nYou chose {choosen_compression} as your Compression Method.")
 
     choosen_file_type = choose_file_type()
     clear_console("Setup Glacier Backup")
-    print(f"\nYou chose {choosen_file_type} as your File Type.")
+    console.print(f"\nYou chose {choosen_file_type} as your File Type.")
 
     choosen_encryption = choose_encryption()
     clear_console("Setup Glacier Backup")
-    print(f"\nYou chose {choosen_encryption} as your Encryption.")
+    console.print(f"\nYou chose {choosen_encryption} as your Encryption.")
 
     store_settings("default", "region", region)
     store_settings("default", "vault", choosen_vault)
@@ -116,6 +116,6 @@ def setup() -> None:
     store_settings("default", "filetype", choosen_file_type)
     store_settings("default", "encryption", choosen_encryption)
     store_settings("global", "setup", "True")
-    print("Your Configuration has been stored in the file ~/.glacier-backup/settings")
-    print("Setup complete.")
+    console.print("Your Configuration has been stored in the file ~/.glacier-backup/settings")
+    console.print("Setup complete.")
     input("Press Enter to continue...")

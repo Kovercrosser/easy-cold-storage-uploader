@@ -1,4 +1,3 @@
-from rich.console import Console
 from dependency_injection.service import Service
 from services.compression.compression_service_none import CompressionServiceNone
 from services.compression.compression_service_bzip2 import CompressionServiceBzip2
@@ -48,7 +47,6 @@ def setup_factory_from_parameters(
     else:
         service.set_service(TransferServiceGlacier(service,  False, 64), "transfer_service")
 
-    service.set_service(Console(), "rich_console")
     service.set_service(CancelService(), "cancel_service")
     service.set_service(DbService("uploads.json"), "db_uploads_service")
     service.set_service(DbService("downloads.json"), "db_downloads_service")

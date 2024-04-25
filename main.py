@@ -1,9 +1,6 @@
 
 import argparse
 import sys
-from rich import print as printx
-import rich
-import rich.traceback
 from dependency_injection.main_factory import setup_factory_from_parameters
 from dependency_injection.service import Service
 from download_executer import download
@@ -11,7 +8,9 @@ from profile_setup import setup
 from services.cancel_service import CancelService
 from upload_executer import upload
 from utils.storage_utils import read_settings
-from utils.console_utils import clear_console
+from utils.console_utils import clear_console, print_error
+from utils.console_utils import console
+
 
 def guided_execution() -> None:
     if read_settings("global", "setup") is None:
@@ -19,19 +18,19 @@ def guided_execution() -> None:
 
     while True:
         clear_console()
-        printx("\n----------------------------------------")
-        printx("-------------Glacier Backup-------------")
-        printx("----------------------------------------\n\n")
-        printx("---------------commands:----------------")
-        printx("1: upload")
-        printx("2: download")
-        printx("3: delete")
-        printx("\n---------------inventory:---------------")
-        printx("4: list all files (from local Database)")
-        printx("\n---------------setup:-------------------")
-        printx("9: setup")
-        printx("\n----------------------------------------\n")
-        printx("Press Ctrl+C to exit.\n")
+        console.print("\n----------------------------------------")
+        console.print("-------------Glacier Backup-------------")
+        console.print("----------------------------------------\n\n")
+        console.print("---------------commands:----------------")
+        console.print("1: upload")
+        console.print("2: download")
+        console.print("3: delete")
+        console.print("\n---------------inventory:---------------")
+        console.print("4: list all files (from local Database)")
+        console.print("\n---------------setup:-------------------")
+        console.print("9: setup")
+        console.print("\n----------------------------------------\n")
+        console.print("Press Ctrl+C to exit.\n")
 
         choice = input("\nEnter your choice: ")
 
@@ -48,7 +47,7 @@ def guided_execution() -> None:
             setup()
         else:
             clear_console()
-            printx("Invalid choice. Please try again.")
+            print_error("Invalid choice. Please try again.")
 
 
 service = Service()
@@ -83,23 +82,22 @@ def main() -> None:
     elif args.command == 'guided' or args.command is None:
         guided_execution()
     else:
-        printx("Invalid command. Please try again.")
+        print_error("Invalid command. Please try again.")
 
 
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        printx("\n\nProgram terminated by user. Exiting...", flush=True)
         try:
             cancel_service: CancelService = service.get_service("cancel_service")
         except ValueError:
             pass
-        new_console = rich.console.Console()
-        new_console.clear()
-        with new_console.status("[bold red]Program terminated by user. Exiting...[/bold red]"):
+        with console.status("[bold red]Program terminated by user. Exiting...[/bold red]"):
             if cancel_service:
                 cancel_service.cancel("user termination")
+        console.set_alt_screen(False)
+        print("Program terminated by user")
     except Exception as exception:
-        printx(f"Unexpected error: {exception}")
+        print(f"Unexpected error: {exception}")
         sys.exit(1)

@@ -7,11 +7,12 @@ import time
 from typing import Any, Generator, Tuple, Union
 import uuid
 import boto3
-from rich.console import Console
 from rich.table import Table
 from dependency_injection.service import Service
 from services.cancel_service import CancelService
 from services.transfer.transfer_base import TransferBase
+from utils.console_utils import console, print_warning
+from utils.console_utils import print_error
 from utils.data_utils import CreateSplittedFilesFromGenerator
 from utils.hash_utils import compute_sha256_tree_hash_for_aws
 from utils.storage_utils import read_settings
@@ -36,7 +37,6 @@ class TransferServiceGlacier(TransferBase):
     dryrun: bool
     hashes: list[bytes] = []
     cancel_service: CancelService
-    rich_console: Console
     glacier_client = None
     cancel_uuid: uuid.UUID | None = None
     upload_consumer_process_1: mp.Process | None = None
@@ -66,7 +66,6 @@ class TransferServiceGlacier(TransferBase):
             raise Exception("Region or Vault is not set")
         self.glacier_client = boto3.client('glacier', region_name=region)
         self.cancel_service = self.service.get_service("cancel_service")
-        self.rich_console = self.service.get_service("rich_console")
         file_name:str = datetime.datetime.now().strftime("%Y-%m-%d") + self.get_file_extension(self.service)
         assert region is not None
         assert vault is not None
@@ -78,8 +77,7 @@ class TransferServiceGlacier(TransferBase):
         except KeyboardInterrupt as e:
             raise e
         except Exception:
-            self.rich_console.print("[bold red]Error during upload")
-            self.rich_console.print_exception()
+            print_error("Error during upload")
             self.cancel_upload("Error during upload", vault, upload_id)
             if self.cancel_uuid:
                 self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
@@ -95,8 +93,7 @@ class TransferServiceGlacier(TransferBase):
         try:
             archive_id, checksum = self.__finish_upload(upload_id, vault, upload_total_size_in_bytes)
         except Exception:
-            self.rich_console.print("[bold red]Error during finishing the upload")
-            self.rich_console.print_exception()
+            print_error("Error during finishing the upload")
             self.cancel_upload("Error during finishing the upload", vault, upload_id)
             if self.cancel_uuid:
                 self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
@@ -121,7 +118,7 @@ class TransferServiceGlacier(TransferBase):
         else:
             if self.cancel_uuid:
                 self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
-            with self.rich_console.status("[bold green]Finishing up..."):
+            with console.status("[bold green]Finishing up..."):
                 if self.glacier_client:
                     complete_status = self.glacier_client.complete_multipart_upload(
                         vaultName=vault,
@@ -133,12 +130,12 @@ class TransferServiceGlacier(TransferBase):
                     raise Exception("Internal Error: Glacier client is not set")
         archive_id = complete_status['archiveId']
         assert archive_id is not None and isinstance(archive_id, str)
-        self.rich_console.print(f"Archive ID: [bold green]{archive_id}")
+        console.print(f"Archive ID: [bold green]{archive_id}")
         return archive_id, checksum
 
     def __init_upload(self, file_name:str, vault:str, region:str) -> Tuple[str, str]:
         if self.dryrun:
-            self.rich_console.print(f"DRY RUN: Uploading {file_name} to Glacier vault {vault} in {region} region with {self.upload_size} byte parts")
+            console.print(f"DRY RUN: Uploading {file_name} to Glacier vault {vault} in {region} region with {self.upload_size} byte parts")
             creation_response = {
                 'uploadId': 'DRY_RUN_UPLOAD_ID',
                 'location': 'DRY_RUN_LOCATION'
@@ -180,8 +177,7 @@ class TransferServiceGlacier(TransferBase):
                 else:
                     raise Exception("Internal Error: Glacier client is not set")
             except Exception:
-                self.rich_console.print("[bold red]Error during a part upload.")
-                self.rich_console.print_exception()
+                print_error("Error while uploading a part")
 
     def __upload_parts(self, data: Generator[bytes,None,None], upload_id: str, vault: str) -> int:
         upload_total_size_in_bytes = 0
@@ -225,7 +221,7 @@ class TransferServiceGlacier(TransferBase):
 
 
     def __upload_consumer_status_reporter(self, status_queues: "list[mp.Queue[str]]") -> None:
-        with self.rich_console.status("", spinner="pong") as status:
+        with console.status("", spinner="pong") as status:
             old_values = ["" for _ in status_queues]
             finished: int = 0
             while True:
@@ -242,7 +238,7 @@ class TransferServiceGlacier(TransferBase):
                         old_value = old_values[i]
                         old_values[i] = new_value
                         if old_value and old_value != "waiting":
-                            self.rich_console.print(f"[purple][{datetime.datetime.now().strftime('%H:%M:%S')}][/purple] {old_value.replace("uploading ", "")} finished")
+                            console.print(f"[purple][{datetime.datetime.now().strftime('%H:%M:%S')}][/purple] {old_value.replace("uploading ", "")} finished")
                 table = Table(show_header=True, header_style="bold magenta")
                 table.add_column("Worker", justify="center")
                 table.add_column("Status", justify="center")
@@ -272,7 +268,7 @@ class TransferServiceGlacier(TransferBase):
                 if self.glacier_client:
                     print("Aborting all uploads")
                     self.glacier_client.abort_multipart_upload(vaultName=vault, uploadId=upload_id)
-                    self.rich_console.print(f"[bold red]Uploaded Parts removed on remote because of {reason}.")
+                    print_warning(f"Uploaded Parts removed on remote because of {reason}")
 
-    def download(self, data: Generator[bytes,None,None]) -> bool:
+    def download(self, data:str) -> Generator[bytes,None,None]:
         raise NotImplementedError("Downloading files isnt currently supported.")
