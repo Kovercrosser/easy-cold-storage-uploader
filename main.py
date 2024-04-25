@@ -3,8 +3,10 @@ import argparse
 import sys
 from rich import print as printx
 import rich
+import rich.traceback
 from dependency_injection.main_factory import setup_factory_from_parameters
 from dependency_injection.service import Service
+from download_executer import download
 from profile_setup import setup
 from services.cancel_service import CancelService
 from upload_executer import upload
@@ -58,17 +60,23 @@ def main() -> None:
     parser_upload.add_argument('--profile', default='default', help='Profile to use')
     parser_upload.add_argument('--paths', '-p', nargs='+', help='Paths of the Files and Folders to upload')
 
+    parser_download = subparsers.add_parser('download', help='Download help')
+    parser_download.add_argument('--profile', default='default', help='Profile to use')
+    parser_download.add_argument('--location', default='.', help='Location to download to')
+
     subparsers.add_parser('setup', help='Initial Setup')
     subparsers.add_parser('guided', help='Uses Guided Execution')
 
     args = parser.parse_args()
 
     # setupFactoryFromStorage(service)
-    setup_factory_from_parameters(service, "None", "None", "zip", False)
+    setup_factory_from_parameters(service, "None", "aes", "zip", True)
 
     # Handle commands
     if args.command == 'upload':
         upload(service, args.profile, args.paths)
+    if args.command == 'download':
+        download(service,  args.profile, args.location, "2024-04-25.zip.aes")
 
     elif args.command == 'setup':
         setup()
@@ -93,7 +101,5 @@ if __name__ == "__main__":
             if cancel_service:
                 cancel_service.cancel("user termination")
     except Exception as exception:
-        printx("Stacktrace:")
-        printx("\n")
         printx(f"Unexpected error: {exception}")
         sys.exit(1)
