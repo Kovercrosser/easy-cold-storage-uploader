@@ -77,7 +77,7 @@ def setup() -> None:
     clear_console("Setup Glacier Backup")
 
     if check_aws_credentials():
-        console.print("You already have AWS Credentials stored in ~/.aws/credentials.")
+        console.print("You already have AWS Credentials stored in [purple]~/.aws/credentials[/purple]")
         result = force_user_input("Do you want to overwrite them? y/n", ["y", "n"])
         if result == "y":
             enter_api_keys()

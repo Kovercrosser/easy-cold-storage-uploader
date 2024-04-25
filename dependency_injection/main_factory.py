@@ -17,35 +17,41 @@ from utils.storage_utils import read_settings
 
 def setup_factory_from_parameters(
     service: Service,
-    compression: str = "None",
-    encryption: str = "None",
-    filetype: str = "None",
-    dryrun: bool = False) -> None:
-    if compression == "None":
+    compression: str = "none",
+    encryption: str = "none",
+    filetype: str = "none",
+    transfer_method: str = "glacier",
+    transfer_chunk_size: int = 64,
+    dryrun: bool = False,
+    compression_level: int = 6,
+    password: str = "",
+    password_file: str = ""
+    ) -> None:
+    if compression == "none":
         service.set_service(CompressionServiceNone(), "compression_service")
     if compression == "bzip2":
         service.set_service(CompressionServiceBzip2(), "compression_service")
     if compression == "lzma":
-        service.set_service(CompressionServiceLzma(), "compression_service")
+        service.set_service(CompressionServiceLzma(compression_level=compression_level), "compression_service")
 
-    if encryption == "None":
+    if encryption == "none":
         service.set_service(EncryptionServiceNone(), "encryption_service")
     if encryption == "aes":
-        service.set_service(EncryptionServiceAes("Valeistdumm"), "encryption_service")
+        service.set_service(EncryptionServiceAes(password, password_file), "encryption_service")
     if encryption == "rsa":
         service.set_service(EncryptionServiceRsa(), "encryption_service")
 
-    if filetype == "None":
+    if filetype == "none":
         service.set_service(FiletypeServiceNone(), "filetype_service")
     if filetype == "tar":
         service.set_service(FiletypeServiceTar(), "filetype_service")
     if filetype == "zip":
         service.set_service(FiletypeServiceZip(compression_level=0, chunk_size=10*1024*1024), "filetype_service")
 
-    if dryrun:
+    if transfer_method == "save":
         service.set_service(TransferServiceSave(service), "transfer_service")
-    else:
-        service.set_service(TransferServiceGlacier(service,  False, 64), "transfer_service")
+    if transfer_method == "glacier":
+        service.set_service(TransferServiceGlacier(service, dryrun, transfer_chunk_size), "transfer_service")
 
     service.set_service(CancelService(), "cancel_service")
     service.set_service(DbService("uploads.json"), "db_uploads_service")
@@ -56,11 +62,33 @@ def setup_factory_from_storage(service: Service, profile: str = "default") -> No
         raise ValueError("Setup not done yet.")
 
     compression = read_settings(profile, "compression")
+    compression_level = read_settings(profile, "compression_level")
     encryption = read_settings(profile, "encryption")
     filetype = read_settings(profile, "filetype")
+    transfer_method = read_settings(profile, "transfer_method")
+    transfer_chunk_size = read_settings(profile, "transfer_chunk_size")
+    password = read_settings(profile, "password")
+    password_file = read_settings(profile, "password_file")
     if any([compression is None, encryption is None, filetype is None]):
         raise ValueError("Profile not setup correctly.")
     assert compression is not None
+    assert compression_level is not None
+    compression_level_int = int(compression_level)
     assert encryption is not None
     assert filetype is not None
-    setup_factory_from_parameters(service, compression, encryption, filetype)
+    assert transfer_method is not None
+    assert transfer_chunk_size is not None
+    transfer_chunk_size_int = int(transfer_chunk_size)
+    assert password is not None
+    assert password_file is not None
+    setup_factory_from_parameters(
+        service,
+        compression=compression,
+        encryption=encryption,
+        filetype=filetype,
+        transfer_method=transfer_method,
+        transfer_chunk_size=transfer_chunk_size_int,
+        compression_level=compression_level_int,
+        password=password,
+        password_file=password_file
+        )

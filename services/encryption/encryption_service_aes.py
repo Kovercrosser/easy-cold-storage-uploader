@@ -4,7 +4,9 @@ from Crypto.Protocol.KDF import PBKDF2
 from services.encryption.encryption_base import EncryptionBase
 
 class EncryptionServiceAes(EncryptionBase):
-    def __init__(self, password: str) -> None:
+    def __init__(self, password: str, password_file: str) -> None:
+        #TO-DO Implement password file
+        #TO-DO remove hardcoded salt
         salt = b'\xa4nTc\x1f\xab\x94\xa1\xefEH\tv\x97G\xe0'
         key = PBKDF2(password, salt, dkLen=32)
         self.cipher_encrypt = AES.new(key, AES.MODE_CFB)

@@ -7,7 +7,7 @@ from services.filetype.filetype_base import FiletypeBase
 from services.transfer.transfer_base import TransferBase
 from utils.console_utils import print_success
 
-def download(service: Service, profile: str, location:str, download_file:str) -> int:
+def download(service: Service, profile: str, location:str, download_file:str, unpack: bool) -> int:
     transfer_service: TransferBase = service.get_service("transfer_service")
     compression_service: CompressionBase = service.get_service("compression_service")
     encryption_service: EncryptionBase = service.get_service("encryption_service")
