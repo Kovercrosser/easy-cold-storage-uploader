@@ -63,7 +63,7 @@ def upload_argument_parser(parser_upload: argparse.ArgumentParser) -> argparse.A
     parser_upload.add_argument('--filetype','-f', choices=["zip"], default="zip", help='The filetype to use.', required='--profile' not in sys.argv)
     # Transfer
     parser_upload.add_argument('--transfer-method', '-t', choices=["save", "glacier"], help='The transfer-method to use.', required='--profile' not in sys.argv)
-    parser_upload.add_argument('--transfer-chunk-size', '-s', type=int, help='The chunk-size to use for the transfer-method', required='--transfer-method' in sys.argv and sys.argv[sys.argv.index('--transfer-method') + 1] == 'glacier')
+    parser_upload.add_argument('--transfer-chunk-size', '-s', default=64, type=int, help='The chunk-size to use for the transfer-method', required='--transfer-method' in sys.argv and sys.argv[sys.argv.index('--transfer-method') + 1] == 'glacier')
     # Dryrun
     parser_upload.add_argument('--dryrun', action='store_true', help='If set, the files will not be uploaded')
     # Upload-Paths
