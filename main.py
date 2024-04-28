@@ -93,6 +93,7 @@ def main() -> None:
     subparsers.add_parser('guided', help='Uses Guided Execution')
 
     args = parser.parse_args()
+    console.set_alt_screen()
 
     if args.command == 'upload':
         setup_factory_from_parameters(service, args.compression_method, args.encryption_method, args.filetype, args.transfer_method, args.transfer_chunk_size, args.dryrun, args.compression_level, args.password, args.password_file)
@@ -106,6 +107,8 @@ def main() -> None:
         guided_execution()
     else:
         print_error("Invalid command. Please try again.")
+    console.set_alt_screen(False)
+
 
 
 if __name__ == "__main__":

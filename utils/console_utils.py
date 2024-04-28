@@ -3,7 +3,6 @@ from rich.console import Console
 from rich.table import Table
 
 console = Console()
-console.set_alt_screen()
 
 def clear_console(new_header: str = "") -> None:
     console.clear()
