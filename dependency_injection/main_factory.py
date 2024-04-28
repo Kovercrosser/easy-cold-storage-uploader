@@ -15,7 +15,7 @@ from services.transfer.transfer_service_glacier import TransferServiceGlacier
 
 from utils.storage_utils import read_settings
 
-def setup_factory_from_parameters(
+def setup_factory_from_parameters( # pylint: disable=too-many-arguments
     service: Service,
     compression: str = "none",
     encryption: str = "none",

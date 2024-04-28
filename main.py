@@ -1,6 +1,5 @@
 
 import argparse
-from ast import arg
 import sys
 from dependency_injection.main_factory import setup_factory_from_parameters
 from dependency_injection.service import Service

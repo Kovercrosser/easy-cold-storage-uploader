@@ -15,13 +15,11 @@ class EncryptionServiceAes(EncryptionBase):
     def encrypt(self, data: Generator[bytes,None,None], key: str) -> Generator[bytes,None,None]:
         for unencrypted in data:
             yield self.cipher_encrypt.encrypt(unencrypted)
-        return
 
     def decrypt(self, data: Generator[bytes,None,None], key: str)-> Generator[bytes,None,None]:
         for encrypted in data:
             decrypted = self.cipher_encrypt.decrypt(encrypted)
             yield decrypted
-        return
 
     def get_extension(self) -> str:
         return ".aes"
