@@ -149,7 +149,10 @@ class TransferServiceGlacier(TransferBase):
                 except KeyboardInterrupt:
                     break
                 continue
-            data = queue.get()
+            try:
+                data = queue.get(timeout=1)
+            except Exception:
+                continue
             if data["range"] == "finish":
                 queue.put({"range": "finish", "part": 0, "data": b""}) # add it again to the queue to notify the other consumers
                 upload_reporting.add_report(Reporting("transferer", report_uuid, "finished", "uploading parts"))
