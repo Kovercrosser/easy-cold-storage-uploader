@@ -27,5 +27,5 @@ class TransferBase(ABC):
         '''
 
     @abstractmethod
-    def download(self, data: str) -> Generator[bytes,None,None]:
+    def download(self, data: str, upload_reporting: ReportManager) -> Generator[bytes,None,None]:
         pass

@@ -2,10 +2,11 @@ import os
 from typing import Generator
 from stat import S_IFREG
 from datetime import datetime
+import uuid
 from stream_zip import stream_zip, ZIP_64, zlib # type: ignore
-from stream_unzip import stream_unzip
 from services.filetype.filetype_base import FiletypeBase
 from utils.console_utils import print_warning
+from utils.report_utils import ReportManager, Reporting
 
 
 class FiletypeServiceZip(FiletypeBase):
@@ -22,9 +23,12 @@ class FiletypeServiceZip(FiletypeBase):
         self.chunk_size = chunk_size
         super().__init__()
 
-    def pack(self, files: list[str]) -> Generator[bytes,None,None]:
+    def pack(self, files: list[str], upload_reporting: ReportManager) -> Generator[bytes,None,None]:
         member_files = []
+        report_uuid = uuid.uuid4()
+        upload_reporting.add_report(Reporting("packer", report_uuid, "waiting"))
         def read_file(fi: str) -> Generator[bytes, None, None]:
+            upload_reporting.add_report(Reporting("packer", report_uuid, "working", "file: " + os.path.basename(fi)))
             with open(fi, 'rb') as f:
                 while True:
                     data = f.read(self.chunk_size)
@@ -52,7 +56,7 @@ class FiletypeServiceZip(FiletypeBase):
         return zipped_chunks
 
 
-    def unpack(self, data: Generator[bytes,None,None], save_location:str, filename:str) -> None:
+    def unpack(self, data: Generator[bytes,None,None], save_location:str, filename:str, upload_reporting: ReportManager) -> None:
         print_warning("Unziping is currently unsupported. It will save the zip file instead")
         with open(os.path.join(save_location, filename), 'wb') as f:
             for chunk in data:

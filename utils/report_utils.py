@@ -10,7 +10,7 @@ from services.cancel_service import CancelService
 from utils.console_utils import console
 
 class Reporting():
-    def __init__(self, worker_type: Literal["uploader" , "crypter" , "packer" , "compressor"],
+    def __init__(self, worker_type: Literal["transferer" , "crypter" , "packer" , "compressor"],
                 worker_id: uuid.UUID,
                 status: Literal["waiting", "working", "finished", "failed", "cancelled"],
                 status_message: str | None = None,

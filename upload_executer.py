@@ -30,9 +30,9 @@ def upload(service: Service, profile: str, paths: list[str]) -> int:
 
     status_report_manager= ReportManager(service)
 
-    packed_generator = filetype_service.pack(files)
-    compressed_generator = compression_service.compress(packed_generator)
-    encrypted_generator = encryption_service.encrypt(compressed_generator, "")
+    packed_generator = filetype_service.pack(files, status_report_manager)
+    compressed_generator = compression_service.compress(packed_generator, status_report_manager)
+    encrypted_generator = encryption_service.encrypt(compressed_generator, "", status_report_manager)
     uplaod_status, upload_service, upload_information = transfer_service.upload(encrypted_generator,status_report_manager)
 
     status_report_manager.stop_reporting()

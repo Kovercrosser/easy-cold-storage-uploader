@@ -257,5 +257,5 @@ class TransferServiceGlacier(TransferBase):
                     self.glacier_client.abort_multipart_upload(vaultName=vault, uploadId=upload_id)
                     print_warning(f"Uploaded Parts removed on remote because of {reason}")
 
-    def download(self, data:str) -> Generator[bytes,None,None]:
+    def download(self, data:str, upload_reporting: ReportManager) -> Generator[bytes,None,None]:
         raise NotImplementedError("Downloading files isnt currently supported.")
