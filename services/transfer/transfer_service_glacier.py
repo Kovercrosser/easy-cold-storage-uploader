@@ -7,7 +7,6 @@ import time
 from typing import Any, Generator, Tuple, Union
 import uuid
 import boto3
-from rich.table import Table
 from dependency_injection.service import Service
 from services.cancel_service import CancelService
 from services.transfer.transfer_base import TransferBase
@@ -15,7 +14,7 @@ from utils.console_utils import console, print_warning
 from utils.console_utils import print_error
 from utils.data_utils import CreateSplittedFilesFromGenerator, bytes_to_human_readable_size, get_file_size
 from utils.hash_utils import compute_sha256_tree_hash_for_aws
-from utils.report_utils import ReportManager
+from utils.report_utils import ReportManager, Reporting
 from utils.storage_utils import read_settings
 
 class TransferServiceGlacier(TransferBase):
@@ -60,7 +59,7 @@ class TransferServiceGlacier(TransferBase):
 
         # Upload the parts
         try:
-            upload_total_size_in_bytes: int = self.__upload_parts(data, upload_id, vault)
+            upload_total_size_in_bytes: int = self.__upload_parts(data, upload_id, vault, upload_reporting)
         except KeyboardInterrupt as e:
             raise e
         except Exception:
@@ -139,20 +138,22 @@ class TransferServiceGlacier(TransferBase):
         self.cancel_uuid = self.cancel_service.subscribe_to_cancel_event(self.cancel_upload, vault, creation_response['uploadId'], self_reference=self)
         return creation_response['uploadId'] , creation_response['location']
 
-    def __upload_consumer(self, queue: "mp.Queue[dict[str, Union[str, int, bytes]]]", upload_id: str, vault: str, status_queue: "mp.Queue[str]") -> None:
+    def __upload_consumer(self, queue: "mp.Queue[dict[str, Union[str, int, bytes]]]", upload_id: str, vault: str, upload_reporting: ReportManager) -> None:
+        report_uuid = uuid.uuid4()
+        upload_reporting.add_report(Reporting("transferer", report_uuid, "waiting"))
         while True:
             if queue.empty():
-                status_queue.put("waiting")
+                upload_reporting.add_report(Reporting("transferer", report_uuid, "waiting"))
                 time.sleep(1)
                 continue
             data = queue.get()
             if data["range"] == "finish":
                 queue.put({"range": "finish", "part": 0, "data": b""}) # add it again to the queue to notify the other consumers
-                status_queue.put("finished")
+                upload_reporting.add_report(Reporting("transferer", report_uuid, "finished", "uploading parts"))
                 break
             if not isinstance(data, dict) or not isinstance(data["data"], bytes) or not isinstance(data["range"], str) or not isinstance(data["part"], int):
                 continue
-            status_queue.put(f"uploading Part {str(data["part"] + 1)}")
+            upload_reporting.add_report(Reporting("transferer", report_uuid, "working", f"uploading Part {str(data["part"] + 1)}"))
             try:
                 if self.glacier_client:
                     self.glacier_client.upload_multipart_part(
@@ -166,22 +167,17 @@ class TransferServiceGlacier(TransferBase):
             except Exception:
                 print_error("Error while uploading a part")
 
-    def __upload_parts(self, data: Generator[bytes,None,None], upload_id: str, vault: str) -> int:
+    def __upload_parts(self, data: Generator[bytes,None,None], upload_id: str, vault: str, upload_reporting: ReportManager) -> int:
         upload_total_size_in_bytes = 0
         creater = CreateSplittedFilesFromGenerator()
         uploaded_parts = 0
         queue: mp.Queue[dict[str, Union[str, int, bytes]]] = mp.Queue()
-        status_queue_1: mp.Queue[str] = mp.Queue()
-        status_queue_2: mp.Queue[str] = mp.Queue()
-        self.upload_consumer_status_reporter = mp.Process(target=self.__upload_consumer_status_reporter, args=([status_queue_1, status_queue_2],))
-        self.upload_consumer_status_reporter.daemon = True
-        self.upload_consumer_process_1 = mp.Process(target=self.__upload_consumer, args=(queue, upload_id, vault, status_queue_1))
+        self.upload_consumer_process_1 = mp.Process(target=self.__upload_consumer, args=(queue, upload_id, vault, upload_reporting))
         self.upload_consumer_process_1.daemon = True
-        self.upload_consumer_process_2 = mp.Process(target=self.__upload_consumer, args=(queue, upload_id, vault, status_queue_2))
+        self.upload_consumer_process_2 = mp.Process(target=self.__upload_consumer, args=(queue, upload_id, vault, upload_reporting))
         self.upload_consumer_process_2.daemon = True
         self.upload_consumer_process_1.start()
         self.upload_consumer_process_2.start()
-        self.upload_consumer_status_reporter.start()
         while True:
             with tempfile.TemporaryFile(mode="b+w") as temp_file:
                 while queue.qsize() > 1:
@@ -203,38 +199,7 @@ class TransferServiceGlacier(TransferBase):
         queue.put({"range": "finish", "part": 0, "data": b""})
         self.upload_consumer_process_1.join()
         self.upload_consumer_process_2.join()
-        self.upload_consumer_status_reporter.join()
         return upload_total_size_in_bytes
-
-
-    def __upload_consumer_status_reporter(self, status_queues: "list[mp.Queue[str]]") -> None:
-        with console.status("", spinner="pong") as status:
-            old_values = ["" for _ in status_queues]
-            finished: int = 0
-            while True:
-                new_values = []
-                for queue in status_queues:
-                    if not queue.empty():
-                        new_values.append(queue.get())
-                    else:
-                        new_values.append("")
-                for i, new_value in enumerate(new_values):
-                    if new_value:
-                        if new_value == "finished":
-                            finished += 1
-                        old_value = old_values[i]
-                        old_values[i] = new_value
-                        if old_value and old_value != "waiting":
-                            console.print(f"[purple][{datetime.datetime.now().strftime('%H:%M:%S')}][/purple] {old_value.replace("uploading ", "")} finished")
-                table = Table(show_header=True, header_style="bold magenta")
-                table.add_column("Worker", justify="center")
-                table.add_column("Status", justify="center")
-                for index, value in enumerate(old_values):
-                    table.add_row(f"{index + 1}", value, style="bold green")
-                status.update(table)
-                if finished == len(status_queues):
-                    break
-                time.sleep(0.1)
 
     def cancel_upload(self, reason: str, vault: str = "", upload_id: str = "") -> None:
         self.cancel_uuid = None
