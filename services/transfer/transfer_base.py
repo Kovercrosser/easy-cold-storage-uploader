@@ -5,6 +5,7 @@ from dependency_injection.service import Service
 from services.compression.compression_base import CompressionBase
 from services.encryption.encryption_base import EncryptionBase
 from services.filetype.filetype_base import FiletypeBase
+from utils.report_utils import ReportManager
 
 class TransferBase(ABC):
 
@@ -16,8 +17,14 @@ class TransferBase(ABC):
         return filetype_service.get_extension() + compression_service.get_extension() + encryption_service.get_extension()
 
     @abstractmethod
-    def upload(self, data: Generator[bytes,None,None]) -> tuple[bool, str, Any]:
-        pass
+    def upload(self, data: Generator[bytes,None,None], upload_reporting: ReportManager) -> tuple[bool, str, Any]:
+        '''
+        upload_reporting is a queue that will be used to send information about the upload
+        The information will be a dictionary with the following keys:
+        - "type": str
+        - "worker": int
+        - "status": str        
+        '''
 
     @abstractmethod
     def download(self, data: str) -> Generator[bytes,None,None]:

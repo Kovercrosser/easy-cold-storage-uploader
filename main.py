@@ -1,6 +1,8 @@
 
 import argparse
 import sys
+from traceback import print_exception
+
 from dependency_injection.main_factory import setup_factory_from_parameters
 from dependency_injection.service import Service
 from download_executer import download
@@ -9,7 +11,7 @@ from services.cancel_service import CancelService
 from upload_executer import upload
 from utils.storage_utils import read_settings
 from utils.console_utils import clear_console, print_error
-from utils.console_utils import console
+from utils.console_utils import console, last_message
 
 
 def guided_execution() -> None:
@@ -52,12 +54,12 @@ def guided_execution() -> None:
 def upload_argument_parser(parser_upload: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser_upload.add_argument('--profile', default='default', help='Profile to use')
     # Compression
-    parser_upload.add_argument('--compression-method', '-c', choices=["none", "lzma"], help='The compression-method to use.', required='--profile' not in sys.argv)
+    parser_upload.add_argument('--compression-method', '-c', choices=["none", "lzma"], default="none", help='The compression-method to use.', required='--profile' not in sys.argv)
     parser_upload.add_argument('--compression-level', '-l',type=int, choices=range(1, 10), default=7, help='The compression level to use. 1 is lowest, 9 is highest', required='--compression-method' in sys.argv and sys.argv[sys.argv.index('--compression-method') + 1] != 'none')
     # Encryption
     parser_upload.add_argument('--encryption-method', '-e',choices=["none", "aes"], default="none", help='The encryption-method to use.', required='--profile' not in sys.argv)
-    parser_upload.add_argument('--password', help='The password to use for encryption. This should not be used as it can leak your password', required='--encryption-method' in sys.argv)
-    parser_upload.add_argument('--password-file', help='The path to the password-file for encryption', required='--encryption-method' in sys.argv and '--encryption-password' not in sys.argv)
+    parser_upload.add_argument('--password', default="", help='The password to use for encryption. This should not be used as it can leak your password', required='--encryption-method' in sys.argv)
+    parser_upload.add_argument('--password-file', default="", help='The path to the password-file for encryption', required='--encryption-method' in sys.argv and '--encryption-password' not in sys.argv)
     # Filetype
     parser_upload.add_argument('--filetype','-f', choices=["zip"], default="zip", help='The filetype to use.', required='--profile' not in sys.argv)
     # Transfer
@@ -107,6 +109,7 @@ def main() -> None:
     else:
         print_error("Invalid command. Please try again.")
     console.set_alt_screen(False)
+    console.print(last_message.get())
 
 
 
@@ -122,7 +125,10 @@ if __name__ == "__main__":
             if cancel_service:
                 cancel_service.cancel("user termination")
         console.set_alt_screen(False)
+        console.print(last_message.get())
         print("Program terminated by user")
     except Exception as exception:
-        print(f"Unexpected error: {exception}")
+        console.set_alt_screen(False)
+        console.print(last_message.get())
+        print_exception(exception)
         sys.exit(1)

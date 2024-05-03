@@ -7,6 +7,14 @@ def get_file_size(temp_file: BufferedRandom) -> int:
     temp_file.seek(0)
     return size
 
+def bytes_to_human_readable_size(size: int) -> str:
+    sizef = float(size)
+    for unit in ("B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB"):
+        if abs(sizef) < 1024.0:
+            return f"{sizef:3.1f} {unit}"
+        sizef /= 1024.0
+    return f"{sizef:.1f} Yi"
+
 class CreateSplittedFilesFromGenerator:
     """
     This Class is used to create parts of a file from a generator.

@@ -1,8 +1,11 @@
 from datetime import datetime
 from typing import Any, Generator
+import uuid
 from dependency_injection.service import Service
 from services.transfer.transfer_base import TransferBase
-from utils.console_utils import print_error
+from utils.console_utils import print_error, print_success
+from utils.data_utils import bytes_to_human_readable_size
+from utils.report_utils import ReportManager, Reporting
 
 class TransferServiceSave(TransferBase):
     service: Service
@@ -10,20 +13,26 @@ class TransferServiceSave(TransferBase):
         self.service = service
         super().__init__()
 
-    def upload(self, data: Generator[bytes,None,None]) -> tuple[bool, str, Any]:
+    def upload(self, data: Generator[bytes,None,None], upload_reporting: ReportManager) -> tuple[bool, str, Any]:
         date:str = datetime.now().strftime("%Y-%m-%d")
         file_name:str = date + self.get_file_extension(self.service)
         size:int = 0
+        report_uuid = uuid.uuid4()
+        upload_reporting.add_report(Reporting("packer", report_uuid, "waiting"))
         try:
             with open(file_name, 'wb') as file:
+                chunkcount = 0
                 for chunk in data:
                     size += len(chunk)
-                    print_error(f"Writing {len(chunk)} bytes to {file_name}")
+                    chunkcount += 1
+                    upload_reporting.add_report(Reporting("packer", report_uuid, "working", "chunk: " + str(chunkcount)))
                     file.write(chunk)
         except (FileExistsError, FileNotFoundError) as exception:
+            upload_reporting.add_report(Reporting("packer", report_uuid, "failed"))
             print_error(f"An error occurred while writing to {file_name}. {exception}")
             return False, "", None
-        print_error(f"Upload complete. {size} bytes written to {file_name}")
+        upload_reporting.add_report(Reporting("packer", report_uuid, "finished", "size: " + bytes_to_human_readable_size(size)))
+        print_success(f"Upload complete. {bytes_to_human_readable_size(size)} bytes written to {file_name}")
         return True, "save_to_disc", {"file_name": file_name, "size": size}
 
     def download(self, data: str) -> Generator[bytes,None,None]:

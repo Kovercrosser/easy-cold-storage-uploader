@@ -5,8 +5,9 @@ from services.db_service import DbService
 from services.encryption.encryption_base import EncryptionBase
 from services.filetype.filetype_base import FiletypeBase
 from services.transfer.transfer_base import TransferBase
+from utils.report_utils import ReportManager
 from utils.storage_utils import get_all_files_from_directories_and_files, read_settings
-from utils.console_utils import console, print_error, print_success
+from utils.console_utils import console, print_error
 
 
 def upload(service: Service, profile: str, paths: list[str]) -> int:
@@ -27,16 +28,17 @@ def upload(service: Service, profile: str, paths: list[str]) -> int:
     console.print(f"Trying to upload {len(files)} {files_text} to [bold purple]{vault}[/bold purple]"
                         f" using profile: [bold purple]{profile}[/bold purple]")
 
+    status_report_manager= ReportManager(service)
+
     packed_generator = filetype_service.pack(files)
     compressed_generator = compression_service.compress(packed_generator)
     encrypted_generator = encryption_service.encrypt(compressed_generator, "")
-    uplaod_status, upload_service, upload_information = transfer_service.upload(encrypted_generator)
+    uplaod_status, upload_service, upload_information = transfer_service.upload(encrypted_generator,status_report_manager)
+
+    status_report_manager.stop_reporting()
 
     db_information = {"type": upload_service, "upload_datetime_utc":  str(datetime.datetime.now(datetime.UTC)),"information": upload_information}
-
     if uplaod_status:
         db_uploads_service.get_context().insert(db_information)
-        print_success("[bold green]Upload completed.")
         return 0
-    print_error("[bold ]Upload failed.")
     return 1

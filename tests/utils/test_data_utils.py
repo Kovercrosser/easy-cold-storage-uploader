@@ -5,17 +5,11 @@ import tempfile
 from typing import Any, Generator
 
 import pytest
-from utils.data_utils import CreateSplittedFilesFromGenerator
+from utils.data_utils import CreateSplittedFilesFromGenerator, get_file_size
 import os
 
 input_file = os.path.join(os.path.curdir, "tests", "utils", "testdata_input")
 output_file = os.path.join(os.path.curdir, "tests", "utils", "testdata_output")
-
-def get_file_size(temp_file: BufferedRandom) -> int:
-    temp_file.seek(0, 2)
-    size = temp_file.tell()
-    temp_file.seek(0)
-    return size
 
 @pytest.fixture(autouse=True)
 def run_around_tests() -> Generator[Any, Any, Any]:

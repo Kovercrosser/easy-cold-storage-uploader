@@ -13,23 +13,10 @@ from services.cancel_service import CancelService
 from services.transfer.transfer_base import TransferBase
 from utils.console_utils import console, print_warning
 from utils.console_utils import print_error
-from utils.data_utils import CreateSplittedFilesFromGenerator
+from utils.data_utils import CreateSplittedFilesFromGenerator, bytes_to_human_readable_size, get_file_size
 from utils.hash_utils import compute_sha256_tree_hash_for_aws
+from utils.report_utils import ReportManager
 from utils.storage_utils import read_settings
-
-def human_readable_size(size: int) -> str:
-    sizef = float(size)
-    for unit in ("B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB"):
-        if abs(sizef) < 1024.0:
-            return f"{sizef:3.1f} {unit}"
-        sizef /= 1024.0
-    return f"{sizef:.1f} Yi"
-
-def get_file_size(temp_file: BufferedRandom) -> int:
-    temp_file.seek(0, 2)
-    size = temp_file.tell()
-    temp_file.seek(0)
-    return size
 
 class TransferServiceGlacier(TransferBase):
     service: Service
@@ -59,7 +46,7 @@ class TransferServiceGlacier(TransferBase):
             self.hashes.append(hashlib.sha256(data).digest())
         file.seek(0)
 
-    def upload(self, data: Generator[bytes,None,None]) -> tuple[bool, str, Any]:
+    def upload(self, data: Generator[bytes,None,None], upload_reporting: ReportManager) -> tuple[bool, str, Any]:
         region:str | None = read_settings("default", "region")
         vault:str | None = read_settings("default", "vault")
         if None in [region, vault]:
@@ -102,7 +89,7 @@ class TransferServiceGlacier(TransferBase):
         self.glacier_client = None
         return True, "aws_glacier", { "dryrun": self.dryrun, "region": region, "vault": vault, "file_name": file_name,
                         "archive_id": archive_id, "checksum": checksum,
-                        "size_in_bytes": upload_total_size_in_bytes, "human_readable_size": human_readable_size(upload_total_size_in_bytes),
+                        "size_in_bytes": upload_total_size_in_bytes, "human_readable_size": bytes_to_human_readable_size(upload_total_size_in_bytes),
                         "upload_id": upload_id, "location": location }
 
     def __finish_upload(self, upload_id: str, vault: str, upload_total_size_in_bytes: int) -> tuple[str, str]:

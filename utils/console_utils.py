@@ -4,19 +4,34 @@ from rich.table import Table
 
 console = Console()
 
+class LastMessage:
+    last_message = ""
+    def set(self, msg: str) -> None:
+        self.last_message = msg
+    def get(self) -> str:
+        return self.last_message
+last_message: LastMessage = LastMessage()
+
 def clear_console(new_header: str = "") -> None:
+    last_message.set("")
     console.clear()
     if new_header:
         console.print(new_header + "\n")
 
 def print_error(error: str) -> None:
-    console.print("[bold red]Error: " + error + "[/bold red]")
+    message = "[bold red]Error: " + error + "[/bold red]"
+    last_message.set(message)
+    console.print(message)
 
 def print_warning(warning: str) -> None:
-    console.print("[bold yellow]Warning: " + warning + "[/bold yellow]")
+    message = "[bold yellow]Warning: " + warning + "[/bold yellow]"
+    last_message.set(message)
+    console.print(message)
 
 def print_success(success: str) -> None:
-    console.print("[bold green]" + success + "[/bold green]")
+    message = "[bold green]" + success + "[/bold green]"
+    last_message.set(message)
+    console.print(message)
 
 def force_user_input_from_list(header: str, user_options: list[str]) -> int:
     console.print( header + ": ")
