@@ -144,7 +144,10 @@ class TransferServiceGlacier(TransferBase):
         while True:
             if queue.empty():
                 upload_reporting.add_report(Reporting("transferer", report_uuid, "waiting"))
-                time.sleep(1)
+                try:
+                    time.sleep(1)
+                except KeyboardInterrupt:
+                    break
                 continue
             data = queue.get()
             if data["range"] == "finish":
@@ -164,6 +167,8 @@ class TransferServiceGlacier(TransferBase):
                     )
                 else:
                     raise Exception("Internal Error: Glacier client is not set")
+            except KeyboardInterrupt:
+                break
             except Exception:
                 print_error("Error while uploading a part")
 
@@ -180,8 +185,14 @@ class TransferServiceGlacier(TransferBase):
         self.upload_consumer_process_2.start()
         while True:
             with tempfile.TemporaryFile(mode="b+w") as temp_file:
-                while queue.qsize() > 1:
-                    time.sleep(0.5)
+                try:
+                    while queue.qsize() > 1:
+                        try:
+                            time.sleep(0.5)
+                        except KeyboardInterrupt:
+                            break
+                except KeyboardInterrupt:
+                    break
                 try:
                     creater.create_next_upload_size_part(data, self.upload_size, temp_file)
                     self.add_to_hash_list(temp_file)

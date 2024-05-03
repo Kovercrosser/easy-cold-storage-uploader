@@ -44,7 +44,8 @@ class ReportManager():
     def add_report(self, report: Reporting) -> None:
         self.reports.put(report)
 
-    def stop_reporting(self) -> None:
+    def stop_reporting(self, reason: str = "") -> None:
+        console.print(f"Stopping reporting: {reason}")
         self.reports.put("stop")
         self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
         self.printer_process.join()
@@ -62,7 +63,10 @@ class ReportManager():
                 if report == "stop":
                     break
                 if report is None:
-                    time.sleep(0.1)
+                    try:
+                        time.sleep(0.1)
+                    except KeyboardInterrupt:
+                        break
                     continue
                 reporter_status: dict[Literal["name","type", "status", "log_message", "status_message"], str | None] = {}
                 worker_name: str
