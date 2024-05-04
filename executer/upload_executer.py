@@ -4,14 +4,17 @@ from services.compression.compression_base import CompressionBase
 from services.db_service import DbService
 from services.encryption.encryption_base import EncryptionBase
 from services.filetype.filetype_base import FiletypeBase
+from services.setting_service import SettingService
 from services.transfer.transfer_base import TransferBase
 from utils.report_utils import ReportManager
-from utils.storage_utils import get_all_files_from_directories_and_files, read_settings
+from utils.storage_utils import get_all_files_from_directories_and_files
 from utils.console_utils import console, print_error
 
 
 def upload(service: Service, profile: str, paths: list[str]) -> int:
-    vault = read_settings(profile, "vault")
+    setting_service: SettingService = service.get_service("setting_service")
+    assert setting_service is not None
+    vault = setting_service.read_settings(profile, "vault")
     transfer_service: TransferBase = service.get_service("transfer_service")
     compression_service: CompressionBase = service.get_service("compression_service")
     encryption_service: EncryptionBase = service.get_service("encryption_service")

@@ -9,13 +9,13 @@ import uuid
 import boto3
 from dependency_injection.service import Service
 from services.cancel_service import CancelService
+from services.setting_service import SettingService
 from services.transfer.transfer_base import TransferBase
 from utils.console_utils import console, print_warning
 from utils.console_utils import print_error
 from utils.data_utils import CreateSplittedFilesFromGenerator, bytes_to_human_readable_size, get_file_size
 from utils.hash_utils import compute_sha256_tree_hash_for_aws
 from utils.report_utils import ReportManager, Reporting
-from utils.storage_utils import read_settings
 
 class TransferServiceGlacier(TransferBase):
     service: Service
@@ -23,6 +23,7 @@ class TransferServiceGlacier(TransferBase):
     dryrun: bool
     hashes: list[bytes] = []
     cancel_service: CancelService
+    setting_service: SettingService
     glacier_client = None
     cancel_uuid: uuid.UUID | None = None
     upload_consumer_process_1: mp.Process | None = None
@@ -46,8 +47,9 @@ class TransferServiceGlacier(TransferBase):
         file.seek(0)
 
     def upload(self, data: Generator[bytes,None,None], report_manager: ReportManager) -> tuple[bool, str, Any]:
-        region:str | None = read_settings("default", "region")
-        vault:str | None = read_settings("default", "vault")
+        self.setting_service = self.service.get_service("setting_service")
+        region:str | None = self.setting_service.read_settings("default", "region")
+        vault:str | None = self.setting_service.read_settings("default", "vault")
         if None in [region, vault]:
             raise Exception("Region or Vault is not set")
         self.glacier_client = boto3.client('glacier', region_name=region)

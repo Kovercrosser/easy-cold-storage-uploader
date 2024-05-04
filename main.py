@@ -9,6 +9,8 @@ from executer.download_executer import download
 from executer.setup_executer import guided_execution, setup
 from executer.upload_executer import upload
 from services.cancel_service import CancelService
+from services.db_service import DbService
+from services.setting_service import SettingService
 from utils.console_utils import (console, handle_console_exit, print_error)
 
 def upload_argument_parser(parser_upload: argparse.ArgumentParser) -> argparse.ArgumentParser:
@@ -18,8 +20,8 @@ def upload_argument_parser(parser_upload: argparse.ArgumentParser) -> argparse.A
     parser_upload.add_argument('--compression-level', '-l',type=int, choices=range(1, 10), default=7, help='The compression level to use. 1 is lowest, 9 is highest', required='--compression-method' in sys.argv and sys.argv[sys.argv.index('--compression-method') + 1] != 'none')
     # Encryption
     parser_upload.add_argument('--encryption-method', '-e',choices=["none", "aes"], default="none", help='The encryption-method to use.', required='--profile' not in sys.argv)
-    parser_upload.add_argument('--password', default="", help='The password to use for encryption. This should not be used as it can leak your password', required='--encryption-method' in sys.argv)
-    parser_upload.add_argument('--password-file', default="", help='The path to the password-file for encryption', required='--encryption-method' in sys.argv and '--encryption-password' not in sys.argv)
+    parser_upload.add_argument('--password', help='The password to use for encryption. This should not be used as it can leak your password', required='--encryption-method' in sys.argv)
+    parser_upload.add_argument('--password-file', help='The path to the password-file for encryption', required='--encryption-method' in sys.argv and '--encryption-password' not in sys.argv)
     # Filetype
     parser_upload.add_argument('--filetype','-f', choices=["zip"], default="zip", help='The filetype to use.', required='--profile' not in sys.argv)
     # Transfer
@@ -40,6 +42,9 @@ def download_argument_parser(parser_download: argparse.ArgumentParser) -> argpar
     return parser_download
 
 service = Service()
+service.set_service(DbService("settings.json"), "settings_db_service")
+service.set_service(SettingService(service), "setting_service")
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command")
@@ -63,9 +68,9 @@ def main() -> None:
         setup_factory_from_parameters(service, "none", "none", "none", "none", dryrun=False, password=args.password, password_file=args.password_file)
         download(service,  args.profile, args.location, args.id, args.unpack)
     elif args.command == 'setup':
-        setup()
+        setup(service)
     elif args.command == 'guided' or args.command is None:
-        guided_execution()
+        guided_execution(service)
     else:
         print_error("Invalid command. Please try again.")
     handle_console_exit()

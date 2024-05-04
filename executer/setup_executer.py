@@ -1,7 +1,8 @@
 import re
 import boto3
 
-from utils.storage_utils import read_settings, store_settings
+from dependency_injection.service import Service
+from services.setting_service import SettingService
 from utils.aws_utils import store_aws_credentials, check_aws_credentials
 from utils.console_utils import clear_console, force_user_input_from_list, force_user_input, console, print_error
 
@@ -73,7 +74,9 @@ def choose_encryption() -> str:
     result = force_user_input_from_list("Choose your Encryption:", encryption_list_with_description)
     return encryption_list[result - 1]
 
-def setup() -> None:
+def setup(service: Service) -> None:
+    setting_service: SettingService = service.get_service("setting_service")
+    assert setting_service is not None
     clear_console("Setup Glacier Backup")
 
     if check_aws_credentials():
@@ -110,19 +113,21 @@ def setup() -> None:
     clear_console("Setup Glacier Backup")
     console.print(f"\nYou chose {choosen_encryption} as your Encryption.")
 
-    store_settings("default", "region", region)
-    store_settings("default", "vault", choosen_vault)
-    store_settings("default", "compression", choosen_compression)
-    store_settings("default", "filetype", choosen_file_type)
-    store_settings("default", "encryption", choosen_encryption)
-    store_settings("global", "setup", "True")
+    setting_service.store_settings("default", "region", region)
+    setting_service.store_settings("default", "vault", choosen_vault)
+    setting_service.store_settings("default", "compression", choosen_compression)
+    setting_service.store_settings("default", "filetype", choosen_file_type)
+    setting_service.store_settings("default", "encryption", choosen_encryption)
+    setting_service.store_settings("global", "setup", "True")
     console.print("Your Configuration has been stored in the file ~/.glacier-backup/settings")
     console.print("Setup complete.")
     input("Press Enter to continue...")
 
-def guided_execution() -> None:
-    if read_settings("global", "setup") is None:
-        setup()
+def guided_execution(service: Service) -> None:
+    setting_service: SettingService = service.get_service("setting_service")
+    assert setting_service is not None
+    if setting_service.read_settings("global", "setup") is None:
+        setup(service)
 
     while True:
         clear_console()
@@ -152,7 +157,7 @@ def guided_execution() -> None:
         elif choice in ("list all files", "4"):
             raise NotImplementedError("List all Files is not implemented yet.")
         elif choice in ("setup", "9"):
-            setup()
+            setup(service)
         else:
             clear_console()
             print_error("Invalid choice. Please try again.")

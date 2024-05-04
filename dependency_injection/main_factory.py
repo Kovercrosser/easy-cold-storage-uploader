@@ -10,10 +10,9 @@ from services.filetype.filetype_service_none import FiletypeServiceNone
 from services.filetype.filetype_service_tar import FiletypeServiceTar
 from services.filetype.filetype_service_zip import FiletypeServiceZip
 from services.cancel_service import CancelService
+from services.setting_service import SettingService
 from services.transfer.transfer_service_save import TransferServiceSave
 from services.transfer.transfer_service_glacier import TransferServiceGlacier
-
-from utils.storage_utils import read_settings
 
 def setup_factory_from_parameters( # pylint: disable=too-many-arguments
     service: Service,
@@ -58,17 +57,20 @@ def setup_factory_from_parameters( # pylint: disable=too-many-arguments
     service.set_service(DbService("downloads.json"), "db_downloads_service")
 
 def setup_factory_from_storage(service: Service, profile: str = "default") -> None:
-    if read_settings("global", "setup") is None:
+    setting_service: SettingService = service.get_service("setting_service")
+    assert setting_service is not None
+
+    if setting_service.read_settings("global", "setup") is None:
         raise ValueError("Setup not done yet.")
 
-    compression = read_settings(profile, "compression")
-    compression_level = read_settings(profile, "compression_level")
-    encryption = read_settings(profile, "encryption")
-    filetype = read_settings(profile, "filetype")
-    transfer_method = read_settings(profile, "transfer_method")
-    transfer_chunk_size = read_settings(profile, "transfer_chunk_size")
-    password = read_settings(profile, "password")
-    password_file = read_settings(profile, "password_file")
+    compression = setting_service.read_settings(profile, "compression")
+    compression_level = setting_service.read_settings(profile, "compression_level")
+    encryption = setting_service.read_settings(profile, "encryption")
+    filetype = setting_service.read_settings(profile, "filetype")
+    transfer_method = setting_service.read_settings(profile, "transfer_method")
+    transfer_chunk_size = setting_service.read_settings(profile, "transfer_chunk_size")
+    password = setting_service.read_settings(profile, "password")
+    password_file = setting_service.read_settings(profile, "password_file")
     if any([compression is None, encryption is None, filetype is None]):
         raise ValueError("Profile not setup correctly.")
     assert compression is not None
