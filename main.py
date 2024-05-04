@@ -10,7 +10,7 @@ from profile_setup import setup
 from services.cancel_service import CancelService
 from upload_executer import upload
 from utils.storage_utils import read_settings
-from utils.console_utils import clear_console, print_error
+from utils.console_utils import clear_console, handle_console_exit, print_error
 from utils.console_utils import console, last_message
 
 
@@ -108,9 +108,7 @@ def main() -> None:
         guided_execution()
     else:
         print_error("Invalid command. Please try again.")
-    console.set_alt_screen(False)
-    console.print(last_message.get())
-
+    handle_console_exit()
 
 
 if __name__ == "__main__":
@@ -124,11 +122,9 @@ if __name__ == "__main__":
         with console.status("[bold red]Program terminated by user. Exiting...[/bold red]"):
             if cancel_service:
                 cancel_service.cancel("user termination")
-        console.set_alt_screen(False)
-        console.print(last_message.get())
+        handle_console_exit()
         print("Program terminated by user")
     except Exception as exception:
-        console.set_alt_screen(False)
-        console.print(last_message.get())
+        handle_console_exit()
         print_exception(exception)
         sys.exit(1)

@@ -59,3 +59,7 @@ def force_user_input(header: str, valid_options: Optional[list[str]]) -> str:
             break
         print_warning("Invalid input. Please try again")
     return choice
+
+def handle_console_exit() -> None:
+    console.set_alt_screen(False)
+    console.print(last_message.get())
