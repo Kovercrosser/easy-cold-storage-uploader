@@ -5,13 +5,12 @@ from traceback import print_exception
 
 from dependency_injection.main_factory import setup_factory_from_parameters
 from dependency_injection.service import Service
-from download_executer import download
-from profile_setup import setup
-from services.cancel_service import CancelService
+from executer.download_executer import download
+from executer.setup_executer import setup
 from executer.upload_executer import upload
+from services.cancel_service import CancelService
+from utils.console_utils import (clear_console, console, handle_console_exit, print_error)
 from utils.storage_utils import read_settings
-from utils.console_utils import clear_console, handle_console_exit, print_error
-from utils.console_utils import console
 
 
 def guided_execution() -> None:
