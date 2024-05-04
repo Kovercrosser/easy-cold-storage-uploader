@@ -17,7 +17,7 @@ class TransferBase(ABC):
         return filetype_service.get_extension() + compression_service.get_extension() + encryption_service.get_extension()
 
     @abstractmethod
-    def upload(self, data: Generator[bytes,None,None], upload_reporting: ReportManager) -> tuple[bool, str, Any]:
+    def upload(self, data: Generator[bytes,None,None], report_manager: ReportManager) -> tuple[bool, str, Any]:
         '''
         upload_reporting is a queue that will be used to send information about the upload
         The information will be a dictionary with the following keys:
@@ -27,5 +27,5 @@ class TransferBase(ABC):
         '''
 
     @abstractmethod
-    def download(self, data: str, upload_reporting: ReportManager) -> Generator[bytes,None,None]:
+    def download(self, data: str, report_manager: ReportManager) -> Generator[bytes,None,None]:
         pass

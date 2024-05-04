@@ -13,36 +13,44 @@ class TransferServiceSave(TransferBase):
         self.service = service
         super().__init__()
 
-    def upload(self, data: Generator[bytes,None,None], upload_reporting: ReportManager) -> tuple[bool, str, Any]:
+    def upload(self, data: Generator[bytes,None,None], report_manager: ReportManager) -> tuple[bool, str, Any]:
         date:str = datetime.now().strftime("%Y-%m-%d")
         file_name:str = date + self.get_file_extension(self.service)
         size:int = 0
         report_uuid = uuid.uuid4()
-        upload_reporting.add_report(Reporting("transferer", report_uuid, "waiting"))
+        report_manager.add_report(Reporting("transferer", report_uuid, "waiting"))
         try:
             with open(file_name, 'wb') as file:
-                chunkcount = 0
+                chunk_count = 0
                 for chunk in data:
                     size += len(chunk)
-                    chunkcount += 1
-                    upload_reporting.add_report(Reporting("transferer", report_uuid, "working", "chunk: " + str(chunkcount)))
+                    chunk_count += 1
+                    report_manager.add_report(Reporting("transferer", report_uuid, "working", "chunk: " + str(chunk_count)))
                     file.write(chunk)
         except (FileExistsError, FileNotFoundError) as exception:
-            upload_reporting.add_report(Reporting("packer", report_uuid, "failed"))
+            report_manager.add_report(Reporting("packer", report_uuid, "failed"))
             print_error(f"An error occurred while writing to {file_name}. {exception}")
             return False, "", None
-        upload_reporting.add_report(Reporting("transferer", report_uuid, "finished", "size: " + bytes_to_human_readable_size(size)))
+        report_manager.add_report(Reporting("transferer", report_uuid, "finished", "size: " + bytes_to_human_readable_size(size)))
         print_success(f"Upload complete. {bytes_to_human_readable_size(size)} written to {file_name}")
         return True, "save_to_disc", {"file_name": file_name, "size": size}
 
-    def download(self, data: str, upload_reporting: ReportManager) -> Generator[bytes,None,None]:
+    def download(self, data: str, report_manager: ReportManager) -> Generator[bytes,None,None]:
+        report_uuid = uuid.uuid4()
+        report_manager.add_report(Reporting("transferer", report_uuid, "waiting"))
         try:
             with open(data, 'rb') as file:
+                chunk_count = 0
+                size = 0
                 while True:
                     chunk = file.read(1024*1024*10)
                     if not chunk:
                         break
+                    chunk_count += 1
+                    size += len(chunk)
+                    report_manager.add_report(Reporting("transferer", report_uuid, "working", "chunk: " + str(chunk_count)))
                     yield chunk
+                report_manager.add_report(Reporting("transferer", report_uuid, "finished", "size: " + bytes_to_human_readable_size(size)))
         except (FileExistsError, FileNotFoundError) as exception:
             print_error(f"An error occurred while reading from the data. {exception}")
             yield b""

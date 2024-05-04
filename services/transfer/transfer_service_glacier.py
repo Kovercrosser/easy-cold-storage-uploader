@@ -45,7 +45,7 @@ class TransferServiceGlacier(TransferBase):
             self.hashes.append(hashlib.sha256(data).digest())
         file.seek(0)
 
-    def upload(self, data: Generator[bytes,None,None], upload_reporting: ReportManager) -> tuple[bool, str, Any]:
+    def upload(self, data: Generator[bytes,None,None], report_manager: ReportManager) -> tuple[bool, str, Any]:
         region:str | None = read_settings("default", "region")
         vault:str | None = read_settings("default", "vault")
         if None in [region, vault]:
@@ -59,7 +59,7 @@ class TransferServiceGlacier(TransferBase):
 
         # Upload the parts
         try:
-            upload_total_size_in_bytes: int = self.__upload_parts(data, upload_id, vault, upload_reporting)
+            upload_total_size_in_bytes: int = self.__upload_parts(data, upload_id, vault, report_manager)
         except KeyboardInterrupt as e:
             raise e
         except Exception:
@@ -237,5 +237,5 @@ class TransferServiceGlacier(TransferBase):
                     self.glacier_client.abort_multipart_upload(vaultName=vault, uploadId=upload_id)
                     print_warning(f"Uploaded Parts removed on remote because of {reason}")
 
-    def download(self, data:str, upload_reporting: ReportManager) -> Generator[bytes,None,None]:
+    def download(self, data:str, report_manager: ReportManager) -> Generator[bytes,None,None]:
         raise NotImplementedError("Downloading files isnt currently supported.")
