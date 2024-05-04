@@ -50,6 +50,9 @@ class ReportManager():
         self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
         self.printer_process.join()
 
+    def get_queue_directly(self) -> "mp.Queue[Reporting | Literal['stop']]":
+        return self.reports
+
     def __get_queue_element_if_exists(self, queue: "mp.Queue[Reporting | Literal['stop']]") -> Reporting | Literal['stop'] | None:
         if queue.qsize() == 0:
             return None

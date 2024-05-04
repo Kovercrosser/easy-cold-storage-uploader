@@ -140,10 +140,11 @@ class TransferServiceGlacier(TransferBase):
 
     def __upload_consumer(self, queue: "mp.Queue[dict[str, Union[str, int, bytes]]]", upload_id: str, vault: str, upload_reporting: ReportManager) -> None:
         report_uuid = uuid.uuid4()
-        upload_reporting.add_report(Reporting("transferer", report_uuid, "waiting"))
+        report_queue = upload_reporting.get_queue_directly()
+        report_queue.put(Reporting("transferer", report_uuid, "waiting"))
         while True:
             if queue.empty():
-                upload_reporting.add_report(Reporting("transferer", report_uuid, "waiting"))
+                report_queue.put(Reporting("transferer", report_uuid, "waiting"))
                 try:
                     time.sleep(1)
                 except KeyboardInterrupt:
@@ -155,11 +156,11 @@ class TransferServiceGlacier(TransferBase):
                 continue
             if data["range"] == "finish":
                 queue.put({"range": "finish", "part": 0, "data": b""}) # add it again to the queue to notify the other consumers
-                upload_reporting.add_report(Reporting("transferer", report_uuid, "finished", "uploading parts"))
+                report_queue.put(Reporting("transferer", report_uuid, "finished", "uploading parts"))
                 break
             if not isinstance(data, dict) or not isinstance(data["data"], bytes) or not isinstance(data["range"], str) or not isinstance(data["part"], int):
                 continue
-            upload_reporting.add_report(Reporting("transferer", report_uuid, "working", f"uploading Part {str(data["part"] + 1)}"))
+            report_queue.put(Reporting("transferer", report_uuid, "working", f"uploading Part {str(data["part"] + 1)}"))
             try:
                 if self.glacier_client:
                     self.glacier_client.upload_multipart_part(
