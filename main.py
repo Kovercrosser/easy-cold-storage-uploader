@@ -8,7 +8,7 @@ from dependency_injection.service import Service
 from download_executer import download
 from profile_setup import setup
 from services.cancel_service import CancelService
-from upload_executer import upload
+from executer.upload_executer import upload
 from utils.storage_utils import read_settings
 from utils.console_utils import clear_console, handle_console_exit, print_error
 from utils.console_utils import console
