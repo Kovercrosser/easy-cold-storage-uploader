@@ -1,9 +1,9 @@
 import re
 import boto3
 
-from utils.storage_utils import store_settings
+from utils.storage_utils import read_settings, store_settings
 from utils.aws_utils import store_aws_credentials, check_aws_credentials
-from utils.console_utils import clear_console, force_user_input_from_list, force_user_input, console
+from utils.console_utils import clear_console, force_user_input_from_list, force_user_input, console, print_error
 
 def choose_region() -> str:
     session = boto3.Session()
@@ -119,3 +119,40 @@ def setup() -> None:
     console.print("Your Configuration has been stored in the file ~/.glacier-backup/settings")
     console.print("Setup complete.")
     input("Press Enter to continue...")
+
+def guided_execution() -> None:
+    if read_settings("global", "setup") is None:
+        setup()
+
+    while True:
+        clear_console()
+        console.print("\n----------------------------------------")
+        console.print("-------------Glacier Backup-------------")
+        console.print("----------------------------------------\n\n")
+        console.print("---------------commands:----------------")
+        console.print("1: upload")
+        console.print("2: download")
+        console.print("3: delete")
+        console.print("\n---------------inventory:---------------")
+        console.print("4: list all files (from local Database)")
+        console.print("\n---------------setup:-------------------")
+        console.print("9: setup")
+        console.print("\n----------------------------------------\n")
+        console.print("Press Ctrl+C to exit.\n")
+
+        choice = input("\nEnter your choice: ")
+
+        # pylint: disable=no-else-raise
+        if choice in ("upload", "1"):
+            raise NotImplementedError("Upload is not implemented yet.")
+        elif choice in ("download", "2"):
+            raise NotImplementedError("Download is not implemented yet.")
+        elif choice in ("delete", "3"):
+            raise NotImplementedError("Delete is not implemented yet.")
+        elif choice in ("list all files", "4"):
+            raise NotImplementedError("List all Files is not implemented yet.")
+        elif choice in ("setup", "9"):
+            setup()
+        else:
+            clear_console()
+            print_error("Invalid choice. Please try again.")

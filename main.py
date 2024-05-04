@@ -6,49 +6,10 @@ from traceback import print_exception
 from dependency_injection.main_factory import setup_factory_from_parameters
 from dependency_injection.service import Service
 from executer.download_executer import download
-from executer.setup_executer import setup
+from executer.setup_executer import guided_execution, setup
 from executer.upload_executer import upload
 from services.cancel_service import CancelService
-from utils.console_utils import (clear_console, console, handle_console_exit, print_error)
-from utils.storage_utils import read_settings
-
-
-def guided_execution() -> None:
-    if read_settings("global", "setup") is None:
-        setup()
-
-    while True:
-        clear_console()
-        console.print("\n----------------------------------------")
-        console.print("-------------Glacier Backup-------------")
-        console.print("----------------------------------------\n\n")
-        console.print("---------------commands:----------------")
-        console.print("1: upload")
-        console.print("2: download")
-        console.print("3: delete")
-        console.print("\n---------------inventory:---------------")
-        console.print("4: list all files (from local Database)")
-        console.print("\n---------------setup:-------------------")
-        console.print("9: setup")
-        console.print("\n----------------------------------------\n")
-        console.print("Press Ctrl+C to exit.\n")
-
-        choice = input("\nEnter your choice: ")
-
-        # pylint: disable=no-else-raise
-        if choice in ("upload", "1"):
-            raise NotImplementedError("Upload is not implemented yet.")
-        elif choice in ("download", "2"):
-            raise NotImplementedError("Download is not implemented yet.")
-        elif choice in ("delete", "3"):
-            raise NotImplementedError("Delete is not implemented yet.")
-        elif choice in ("list all files", "4"):
-            raise NotImplementedError("List all Files is not implemented yet.")
-        elif choice in ("setup", "9"):
-            setup()
-        else:
-            clear_console()
-            print_error("Invalid choice. Please try again.")
+from utils.console_utils import (console, handle_console_exit, print_error)
 
 def upload_argument_parser(parser_upload: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser_upload.add_argument('--profile', default='default', help='Profile to use')
