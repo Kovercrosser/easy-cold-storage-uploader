@@ -80,13 +80,14 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
+        CANCEL_SERVICE: CancelService | None = None
         try:
-            cancel_service: CancelService = service.get_service("cancel_service")
+            CANCEL_SERVICE = service.get_service("cancel_service")
         except ValueError:
             pass
         with console.status("[bold red]Program terminated by user. Exiting...[/bold red]"):
-            if cancel_service:
-                cancel_service.cancel("user termination")
+            if CANCEL_SERVICE:
+                CANCEL_SERVICE.cancel("user termination")
         handle_console_exit()
         print("Program terminated by user")
     except Exception as exception:
