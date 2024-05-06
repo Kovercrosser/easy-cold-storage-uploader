@@ -44,7 +44,7 @@ def upload_argument_parser(parser_upload: argparse.ArgumentParser) -> argparse.A
         '--filetype',
         '-f',
         choices=["zip"],
-        efault="zip",
+        default="zip",
         help='The filetype to use.',
         required='--profile' not in sys.argv
         )
