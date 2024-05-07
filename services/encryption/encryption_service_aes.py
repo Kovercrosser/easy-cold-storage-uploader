@@ -10,8 +10,8 @@ class EncryptionServiceAes(EncryptionBase):
         #TO-DO Implement password file
         #TO-DO remove hardcoded salt
         salt = b'\xa4nTc\x1f\xab\x94\xa1\xefEH\tv\x97G\xe0'
-        if password is None or password == "":
-            raise ValueError("Password is required for AES encryption")
+        if password == "" and password_file == "":
+            raise ValueError("Password or passwordfile is required for AES encryption")
         key = PBKDF2(password, salt, dkLen=32)
         self.cipher_encrypt = AES.new(key, AES.MODE_CFB)
         super().__init__()
