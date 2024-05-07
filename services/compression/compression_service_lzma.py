@@ -13,7 +13,6 @@ class CompressionServiceLzma(CompressionBase):
         super().__init__()
 
     def compress(self, data: Generator[bytes,None,None], upload_reporting: ReportManager) -> Generator[bytes,None,None]:
-        print("Compressing data with LZMA in chunks")
         compressor = lzma.LZMACompressor(format=lzma.FORMAT_XZ, check=lzma.CHECK_CRC64, preset=self.compression_level)
         report_uuid = uuid.uuid4()
         upload_reporting.add_report(Reporting("compressor", report_uuid, "waiting"))
