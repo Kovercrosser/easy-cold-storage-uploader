@@ -11,7 +11,6 @@ def upload_argument_parser(parser_upload: argparse.ArgumentParser) -> argparse.A
         '-c', choices=["none", "lzma"],
         default="none",
         help='The compression-method to use.',
-        required='--profile' not in sys.argv
         )
     parser_upload.add_argument(
         '--compression-level',
@@ -19,7 +18,6 @@ def upload_argument_parser(parser_upload: argparse.ArgumentParser) -> argparse.A
         choices=range(1, 10),
         default=7,
         help='The compression level to use. 1 is lowest, 9 is highest',
-        required='--compression-method' in sys.argv and sys.argv[sys.argv.index('--compression-method') + 1] != 'none'
         )
     # Encryption
     parser_upload.add_argument(
@@ -28,7 +26,6 @@ def upload_argument_parser(parser_upload: argparse.ArgumentParser) -> argparse.A
         choices=["none", "aes"],
         default="none",
         help='The encryption-method to use.',
-        required='--profile' not in sys.argv
         )
     parser_upload.add_argument(
         '--password',
@@ -46,7 +43,6 @@ def upload_argument_parser(parser_upload: argparse.ArgumentParser) -> argparse.A
         choices=["zip"],
         default="zip",
         help='The filetype to use.',
-        required='--profile' not in sys.argv
         )
     # Transfer
     parser_upload.add_argument(
@@ -62,7 +58,6 @@ def upload_argument_parser(parser_upload: argparse.ArgumentParser) -> argparse.A
         default=64,
         type=int,
         help='The chunk-size to use for the transfer-method',
-        required='--transfer-method' in sys.argv and sys.argv[sys.argv.index('--transfer-method') + 1] == 'glacier'
         )
     # Dryrun
     parser_upload.add_argument(
@@ -75,7 +70,8 @@ def upload_argument_parser(parser_upload: argparse.ArgumentParser) -> argparse.A
         '--paths',
         '-p',
         nargs='+',
-        help='Paths of the Files and Folders to upload'
+        help='Paths of the Files and Folders to upload',
+        required=True
         )
     return parser_upload
 
