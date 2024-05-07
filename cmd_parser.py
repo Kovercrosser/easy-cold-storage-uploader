@@ -7,22 +7,24 @@ def upload_argument_parser(parser_upload: argparse.ArgumentParser) -> argparse.A
     parser_upload.add_argument('--profile', default='default', help='Profile to use')
     # Compression
     parser_upload.add_argument(
+        '-c',
         '--compression-method',
-        '-c', choices=["none", "lzma"],
+        choices=["none", "lzma"],
         default="none",
         help='The compression-method to use.',
         )
     parser_upload.add_argument(
+        '-l',
         '--compression-level',
-        '-l',type=int,
+        type=int,
         choices=range(1, 10),
         default=7,
         help='The compression level to use. 1 is lowest, 9 is highest',
         )
     # Encryption
     parser_upload.add_argument(
-        '--encryption-method',
         '-e',
+        '--encryption-method',
         choices=["none", "aes"],
         default="none",
         help='The encryption-method to use.',
@@ -38,23 +40,23 @@ def upload_argument_parser(parser_upload: argparse.ArgumentParser) -> argparse.A
         required='--encryption-method' in sys.argv and '--encryption-password' not in sys.argv)
     # Filetype
     parser_upload.add_argument(
-        '--filetype',
         '-f',
+        '--filetype',
         choices=["zip"],
         default="zip",
         help='The filetype to use.',
         )
     # Transfer
     parser_upload.add_argument(
-        '--transfer-method',
         '-t',
+        '--transfer-method',
         choices=["save", "glacier"],
         help='The transfer-method to use.',
         required='--profile' not in sys.argv
         )
     parser_upload.add_argument(
-        '--transfer-chunk-size',
         '-s',
+        '--transfer-chunk-size',
         default=64,
         type=int,
         help='The chunk-size to use for the transfer-method',
@@ -67,8 +69,8 @@ def upload_argument_parser(parser_upload: argparse.ArgumentParser) -> argparse.A
         )
     # Upload-Paths
     parser_upload.add_argument(
-        '--paths',
         '-p',
+        '--paths',
         nargs='+',
         help='Paths of the Files and Folders to upload',
         required=True
@@ -84,11 +86,6 @@ def download_argument_parser(parser_download: argparse.ArgumentParser) -> argpar
         '--location', 
         default='.',
         help='Location to download to'
-    )
-    parser_download.add_argument(
-        '--unpack', 
-        action='store_true',
-        help='Set if the file should be unpacked'
     )
     parser_download.add_argument(
         '--password', 
