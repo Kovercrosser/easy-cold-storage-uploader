@@ -36,12 +36,12 @@ def upload(service: Service, profile: str, paths: list[str]) -> int:
     packed_generator = filetype_service.pack(files, status_report_manager)
     compressed_generator = compression_service.compress(packed_generator, status_report_manager)
     encrypted_generator = encryption_service.encrypt(compressed_generator, "", status_report_manager)
-    uplaod_status, upload_service, upload_information = transfer_service.upload(encrypted_generator,status_report_manager)
+    upload_status, upload_service, upload_information = transfer_service.upload(encrypted_generator,status_report_manager)
 
     status_report_manager.stop_reporting()
 
     db_information = {"type": upload_service, "upload_datetime_utc":  str(datetime.datetime.now(datetime.UTC)),"information": upload_information}
-    if uplaod_status:
+    if upload_status:
         db_uploads_service.get_context().insert(db_information)
         return 0
     return 1
