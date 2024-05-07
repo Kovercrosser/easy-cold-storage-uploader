@@ -1,8 +1,10 @@
+import os
 from typing import Generator
 import uuid
 from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import PBKDF2
 from services.encryption.encryption_base import EncryptionBase
+from utils.console_utils import print_error
 from utils.report_utils import ReportManager, Reporting
 
 class EncryptionServiceAes(EncryptionBase):
@@ -12,6 +14,19 @@ class EncryptionServiceAes(EncryptionBase):
         salt = b'\xa4nTc\x1f\xab\x94\xa1\xefEH\tv\x97G\xe0'
         if password == "" and password_file == "":
             raise ValueError("Password or passwordfile is required for AES encryption")
+        if password_file != "":
+            if os.path.isfile(password_file) is False:
+                print_error("Password file does not exist")
+                raise ValueError("Password file does not exist")
+            with open(password_file, "r", encoding="utf-8") as f:
+                password = f.readline().strip()
+                if password == "":
+                    print_error("Password file is empty")
+                    raise ValueError("Password file is empty")
+                print(password)
+                if " " in password:
+                    print_error("Password file contains spaces")
+                    raise ValueError("Password file contains spaces")
         key = PBKDF2(password, salt, dkLen=32)
         self.cipher_encrypt = AES.new(key, AES.MODE_CFB)
         super().__init__()
