@@ -2,6 +2,20 @@
 import argparse
 import sys
 
+def argument_parser() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest="command")
+
+    parser_upload = subparsers.add_parser('upload', help='Upload help')
+    parser_upload = upload_argument_parser(parser_upload)
+
+    parser_download = subparsers.add_parser('download', help='Download help')
+    parser_download = download_argument_parser(parser_download)
+
+    subparsers.add_parser('setup', help='Initial Setup')
+    subparsers.add_parser('guided', help='Uses Guided Execution')
+
+    return parser.parse_args()
 
 def upload_argument_parser(parser_upload: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser_upload.add_argument('--profile', default='default', help='Profile to use')

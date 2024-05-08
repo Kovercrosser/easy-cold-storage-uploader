@@ -1,5 +1,3 @@
-
-import argparse
 import sys
 from traceback import print_exception
 
@@ -12,26 +10,14 @@ from services.cancel_service import CancelService
 from services.db_service import DbService
 from services.setting_service import SettingService
 from utils.console_utils import (console, handle_console_exit, print_error)
-from cmd_parser import upload_argument_parser, download_argument_parser
+from cmd_parser import argument_parser
 
 service = Service()
 service.set_service(DbService("settings.json"), "settings_db_service")
 service.set_service(SettingService(service), "setting_service")
 
 def main() -> None:
-    parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers(dest="command")
-
-    parser_upload = subparsers.add_parser('upload', help='Upload help')
-    parser_upload = upload_argument_parser(parser_upload)
-
-    parser_download = subparsers.add_parser('download', help='Download help')
-    parser_download = download_argument_parser(parser_download)
-
-    subparsers.add_parser('setup', help='Initial Setup')
-    subparsers.add_parser('guided', help='Uses Guided Execution')
-
-    args = parser.parse_args()
+    args = argument_parser()
     console.set_alt_screen()
 
     if args.command == 'upload':
