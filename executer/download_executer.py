@@ -1,6 +1,3 @@
-import os
-from typing import Type
-
 from tinydb import Query
 from tinydb.table import Document
 from dependency_injection.service import Service
