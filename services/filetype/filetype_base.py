@@ -1,9 +1,10 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Generator
 
+from services.service_base import ServiceBase
 from utils.report_utils import ReportManager
 
-class FiletypeBase(ABC):
+class FiletypeBase(ServiceBase):
 
     @abstractmethod
     def pack(self, files: list[str], upload_reporting: ReportManager) -> Generator[bytes,None,None]:

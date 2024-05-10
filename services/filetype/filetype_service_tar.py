@@ -1,8 +1,9 @@
 from typing import Generator
 from services.filetype.filetype_base import FiletypeBase
+from services.service_base import ServiceBase
 from utils.report_utils import ReportManager
 
-class FiletypeServiceTar(FiletypeBase):
+class FiletypeServiceTar(FiletypeBase, ServiceBase):
     def pack(self, files: list[str], upload_reporting: ReportManager) -> Generator[bytes,None,None]:
         raise NotImplementedError("Packing into a tar files isnt currently supported.")
 

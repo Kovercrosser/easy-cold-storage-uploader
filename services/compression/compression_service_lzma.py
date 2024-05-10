@@ -2,9 +2,10 @@ import lzma
 from typing import Generator
 import uuid
 from services.compression.compression_base import CompressionBase
+from services.service_base import ServiceBase
 from utils.report_utils import ReportManager, Reporting
 
-class CompressionServiceLzma(CompressionBase):
+class CompressionServiceLzma(CompressionBase, ServiceBase):
     compression_level: int
     def __init__(self, compression_level: int = 6) -> None:
         if compression_level not in range(1, 10):

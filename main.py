@@ -21,11 +21,31 @@ def main() -> None:
     console.set_alt_screen()
 
     if args.command == 'upload':
-        setup_factory_from_parameters(service, args.compression_method, args.encryption_method, args.filetype, args.transfer_method, args.transfer_chunk_size, args.dryrun, args.compression_level, args.password, args.password_file)
+        setup_factory_from_parameters(
+            service,
+            args.compression_method,
+            args.encryption_method,
+            args.filetype,
+            args.transfer_method,
+            args.transfer_chunk_size,
+            args.dryrun,
+            args.compression_level,
+            args.password,
+            args.password_file
+        )
         upload(service, args.profile, args.paths)
     elif args.command == 'download':
-        setup_factory_from_parameters(service, "none", "none", "none", "none", dryrun=False, password=args.password, password_file=args.password_file)
-        download(service,  args.profile, args.location, args.id, args.unpack)
+        setup_factory_from_parameters(
+            service,
+            "none",
+            "none",
+            "none",
+            "none",
+            dryrun=False,
+            password=args.password,
+            password_file=args.password_file
+        )
+        download(service,  args.profile, args.location, args.id, args.password, args.password_file)
     elif args.command == 'setup':
         setup(service)
     elif args.command == 'guided' or args.command is None:

@@ -13,6 +13,7 @@ from services.cancel_service import CancelService
 from services.setting_service import SettingService
 from services.transfer.transfer_service_save import TransferServiceSave
 from services.transfer.transfer_service_glacier import TransferServiceGlacier
+from datetime import date
 
 def setup_factory_from_parameters( # pylint: disable=too-many-arguments
     service: Service,
@@ -48,7 +49,8 @@ def setup_factory_from_parameters( # pylint: disable=too-many-arguments
         service.set_service(FiletypeServiceZip(compression_level=0, chunk_size=10*1024*1024), "filetype_service")
 
     if transfer_method == "save":
-        service.set_service(TransferServiceSave(service), "transfer_service")
+        current_date = date.today().strftime("%d-%m-%Y")
+        service.set_service(TransferServiceSave(service, "", current_date), "transfer_service")
     if transfer_method == "glacier":
         service.set_service(TransferServiceGlacier(service, dryrun, transfer_chunk_size), "transfer_service")
 

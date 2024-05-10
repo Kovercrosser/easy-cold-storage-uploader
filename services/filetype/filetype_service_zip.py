@@ -58,7 +58,7 @@ class FiletypeServiceZip(FiletypeBase):
 
     def unpack(self, data: Generator[bytes,None,None], save_location:str, filename:str, upload_reporting: ReportManager) -> None:
         print_warning("Unziping is currently unsupported. It will save the zip file instead")
-        with open(os.path.join(save_location, filename), 'wb') as f:
+        with open(os.path.join(save_location, "2" + filename), 'wb') as f:
             for chunk in data:
                 f.write(chunk)
 

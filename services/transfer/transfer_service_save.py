@@ -1,26 +1,33 @@
-from datetime import datetime
-from typing import Any, Generator
+import os
 import uuid
+from typing import Any, Generator
+
+from tinydb.table import Document
+
 from dependency_injection.service import Service
 from services.transfer.transfer_base import TransferBase
 from utils.console_utils import print_error, print_success
 from utils.data_utils import bytes_to_human_readable_size
-from utils.report_utils import ReportManager, Reporting
+from utils.report_utils import Reporting, ReportManager
+
 
 class TransferServiceSave(TransferBase):
     service: Service
-    def __init__(self,  service: Service) -> None:
+    file_name: str
+    location: str
+    def __init__(self,  service: Service, location: str, file_name_without_extension: str) -> None:
         self.service = service
+        self.file_name = file_name_without_extension
+        self.location = location
         super().__init__()
 
-    def upload(self, data: Generator[bytes,None,None], report_manager: ReportManager) -> tuple[bool, str, Any]:
-        date:str = datetime.now().strftime("%Y-%m-%d")
-        file_name:str = date + self.get_file_extension(self.service)
+    def upload(self, data: Generator[bytes,None,None], report_manager: ReportManager) -> tuple[bool, str, str, Any]:
+        self.file_name:str = os.path.join(self.location, self.file_name + self.get_file_extension(self.service))
         size:int = 0
         report_uuid = uuid.uuid4()
         report_manager.add_report(Reporting("transferer", report_uuid, "waiting"))
         try:
-            with open(file_name, 'wb') as file:
+            with open(self.file_name, 'wb') as file:
                 chunk_count = 0
                 for chunk in data:
                     size += len(chunk)
@@ -29,17 +36,23 @@ class TransferServiceSave(TransferBase):
                     file.write(chunk)
         except (FileExistsError, FileNotFoundError) as exception:
             report_manager.add_report(Reporting("packer", report_uuid, "failed"))
-            print_error(f"An error occurred while writing to {file_name}. {exception}")
-            return False, "", None
+            print_error(f"An error occurred while writing to {self.file_name}. {exception}")
+            return False, "", "", None
         report_manager.add_report(Reporting("transferer", report_uuid, "finished", "size: " + bytes_to_human_readable_size(size)))
-        print_success(f"Upload complete. {bytes_to_human_readable_size(size)} written to {file_name}")
-        return True, "save_to_disc", {"file_name": file_name, "size": size}
+        print_success(f"Upload complete. {bytes_to_human_readable_size(size)} written to {self.file_name}")
+        return True, "save", self.file_name,  {"file_name": self.file_name, "size": size, "location": os.getcwd()}
 
-    def download(self, data: str, report_manager: ReportManager) -> Generator[bytes,None,None]:
+    def download(self, data_information: Document, report_manager: ReportManager) -> Generator[bytes,None,None]:
         report_uuid = uuid.uuid4()
         report_manager.add_report(Reporting("transferer", report_uuid, "waiting"))
+        file_name = data_information["information"]["file_name"]
+        location = data_information["information"]["location"]
+        assert isinstance(file_name, str)
+        assert isinstance(location, str)
+        assert os.path.isdir(location)
+        assert os.path.isfile(os.path.join(location,file_name))
         try:
-            with open(data, 'rb') as file:
+            with open(os.path.join(location,file_name), 'rb') as file:
                 chunk_count = 0
                 size = 0
                 while True:

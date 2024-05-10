@@ -1,21 +1,25 @@
 import datetime
 import hashlib
 import multiprocessing as mp
-from io import BufferedRandom
 import tempfile
 import time
-from typing import Any, Generator, Tuple, Union
 import uuid
+from io import BufferedRandom
+from typing import Any, Generator, Tuple, Union
+
 import boto3
+from tinydb.table import Document
+
 from dependency_injection.service import Service
 from services.cancel_service import CancelService
 from services.setting_service import SettingService
 from services.transfer.transfer_base import TransferBase
-from utils.console_utils import console, print_warning
-from utils.console_utils import print_error
-from utils.data_utils import CreateSplittedFilesFromGenerator, bytes_to_human_readable_size, get_file_size
+from utils.console_utils import console, print_error, print_warning
+from utils.data_utils import (CreateSplittedFilesFromGenerator,
+                              bytes_to_human_readable_size, get_file_size)
 from utils.hash_utils import compute_sha256_tree_hash_for_aws
-from utils.report_utils import ReportManager, Reporting
+from utils.report_utils import Reporting, ReportManager
+
 
 class TransferServiceGlacier(TransferBase):
     service: Service
@@ -46,7 +50,7 @@ class TransferServiceGlacier(TransferBase):
             self.hashes.append(hashlib.sha256(data).digest())
         file.seek(0)
 
-    def upload(self, data: Generator[bytes,None,None], report_manager: ReportManager) -> tuple[bool, str, Any]:
+    def upload(self, data: Generator[bytes,None,None], report_manager: ReportManager) -> tuple[bool, str, str, Any]:
         self.setting_service = self.service.get_service("setting_service")
         region:str | None = self.setting_service.read_settings("default", "region")
         vault:str | None = self.setting_service.read_settings("default", "vault")
@@ -70,13 +74,13 @@ class TransferServiceGlacier(TransferBase):
             if self.cancel_uuid:
                 self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
             self.glacier_client = None
-            return False, "", None
+            return False, "", "", None
         if upload_total_size_in_bytes == -1:
             self.cancel_upload("User Interrupt", vault, upload_id)
             if self.cancel_uuid:
                 self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
             self.glacier_client = None
-            return False, "", None
+            return False, "", "", None
         # Finish the upload
         try:
             archive_id, checksum = self.__finish_upload(upload_id, vault, upload_total_size_in_bytes)
@@ -86,9 +90,9 @@ class TransferServiceGlacier(TransferBase):
             if self.cancel_uuid:
                 self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
             self.glacier_client = None
-            return False, "", None
+            return False, "", "", None
         self.glacier_client = None
-        return True, "aws_glacier", { "dryrun": self.dryrun, "region": region, "vault": vault, "file_name": file_name,
+        return True, "glacier", file_name, { "dryrun": self.dryrun, "region": region, "vault": vault, "file_name": file_name,
                         "archive_id": archive_id, "checksum": checksum,
                         "size_in_bytes": upload_total_size_in_bytes, "human_readable_size": bytes_to_human_readable_size(upload_total_size_in_bytes),
                         "upload_id": upload_id, "location": location }
@@ -239,5 +243,5 @@ class TransferServiceGlacier(TransferBase):
                     self.glacier_client.abort_multipart_upload(vaultName=vault, uploadId=upload_id)
                     print_warning(f"Uploaded Parts removed on remote because of {reason}")
 
-    def download(self, data:str, report_manager: ReportManager) -> Generator[bytes,None,None]:
+    def download(self, data_information: Document, report_manager: ReportManager) -> Generator[bytes,None,None]:
         raise NotImplementedError("Downloading files isnt currently supported.")

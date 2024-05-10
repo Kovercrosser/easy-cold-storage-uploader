@@ -93,6 +93,7 @@ def upload_argument_parser(parser_upload: argparse.ArgumentParser) -> argparse.A
     return parser_upload
 
 def download_argument_parser(parser_download: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    parser_download.add_argument('--profile', default='default', help='Profile to use')
     parser_download.add_argument(
         '--id',
         help='Id of Element to download or Glacier Archive-Id',

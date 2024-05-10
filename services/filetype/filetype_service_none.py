@@ -1,8 +1,9 @@
 from typing import Generator
 from services.filetype.filetype_base import FiletypeBase
+from services.service_base import ServiceBase
 from utils.report_utils import ReportManager
 
-class FiletypeServiceNone(FiletypeBase):
+class FiletypeServiceNone(FiletypeBase, ServiceBase):
     def pack(self, files: list[str], upload_reporting: ReportManager) -> Generator[bytes,None,None]:
         raise NotImplementedError("The Upload of individual Files isnt currently supported.")
 

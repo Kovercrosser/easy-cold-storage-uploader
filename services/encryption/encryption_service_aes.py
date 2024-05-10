@@ -4,10 +4,11 @@ import uuid
 from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import PBKDF2
 from services.encryption.encryption_base import EncryptionBase
+from services.service_base import ServiceBase
 from utils.console_utils import print_error
 from utils.report_utils import ReportManager, Reporting
 
-class EncryptionServiceAes(EncryptionBase):
+class EncryptionServiceAes(EncryptionBase, ServiceBase):
     def __init__(self, password: str, password_file: str) -> None:
         #TO-DO Implement password file
         #TO-DO remove hardcoded salt
@@ -31,7 +32,7 @@ class EncryptionServiceAes(EncryptionBase):
         self.cipher_encrypt = AES.new(key, AES.MODE_CFB)
         super().__init__()
 
-    def encrypt(self, data: Generator[bytes,None,None], key: str, upload_reporting: ReportManager) -> Generator[bytes,None,None]:
+    def encrypt(self, data: Generator[bytes,None,None], upload_reporting: ReportManager) -> Generator[bytes,None,None]:
         report_uuid = uuid.uuid4()
         upload_reporting.add_report(Reporting("crypter", report_uuid, "waiting"))
         chunkcount = 0
@@ -41,7 +42,7 @@ class EncryptionServiceAes(EncryptionBase):
             upload_reporting.add_report(Reporting("crypter", report_uuid, "working", "chunk: " + str(chunkcount)))
         upload_reporting.add_report(Reporting("crypter", report_uuid, "finished", "chunks: " + str(chunkcount)))
 
-    def decrypt(self, data: Generator[bytes,None,None], key: str, upload_reporting: ReportManager)-> Generator[bytes,None,None]:
+    def decrypt(self, data: Generator[bytes,None,None], upload_reporting: ReportManager)-> Generator[bytes,None,None]:
         report_uuid = uuid.uuid4()
         upload_reporting.add_report(Reporting("crypter", report_uuid, "waiting"))
         chunkcount = 0

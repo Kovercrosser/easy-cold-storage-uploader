@@ -1,16 +1,17 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Generator
 
+from services.service_base import ServiceBase
 from utils.report_utils import ReportManager
 
-class EncryptionBase(ABC):
+class EncryptionBase(ServiceBase):
 
     @abstractmethod
-    def encrypt(self, data: Generator[bytes,None,None], key: str, upload_reporting: ReportManager) -> Generator[bytes,None,None]:
+    def encrypt(self, data: Generator[bytes,None,None], upload_reporting: ReportManager) -> Generator[bytes,None,None]:
         pass
 
     @abstractmethod
-    def decrypt(self, data: Generator[bytes,None,None], key: str, upload_reporting: ReportManager) -> Generator[bytes,None,None]:
+    def decrypt(self, data: Generator[bytes,None,None], upload_reporting: ReportManager) -> Generator[bytes,None,None]:
         pass
 
     @abstractmethod
