@@ -11,6 +11,7 @@ import boto3
 from tinydb.table import Document
 
 from dependency_injection.service import Service
+from enums.transfer_service_ids import TransferServiceType
 from services.cancel_service import CancelService
 from services.setting_service import SettingService
 from services.transfer.transfer_base import TransferBase
@@ -50,13 +51,13 @@ class TransferServiceGlacier(TransferBase):
             self.hashes.append(hashlib.sha256(data).digest())
         file.seek(0)
 
-    def upload(self, data: Generator[bytes,None,None], report_manager: ReportManager) -> tuple[bool, str, str, Any]:
+    def upload(self, data: Generator[bytes,None,None], report_manager: ReportManager) -> tuple[bool, TransferServiceType, str, Any]:
         self.setting_service = self.service.get_service("setting_service")
         region:str | None = self.setting_service.read_settings("default", "region")
         vault:str | None = self.setting_service.read_settings("default", "vault")
         if None in [region, vault]:
             raise Exception("Region or Vault is not set")
-        self.glacier_client = boto3.client('glacier', region_name=region)
+        self.glacier_client = boto3.client("glacier", region_name=region)
         self.cancel_service = self.service.get_service("cancel_service")
         file_name:str = datetime.datetime.now().strftime("%Y-%m-%d") + self.get_file_extension(self.service)
         assert region is not None
@@ -74,13 +75,13 @@ class TransferServiceGlacier(TransferBase):
             if self.cancel_uuid:
                 self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
             self.glacier_client = None
-            return False, "", "", None
+            return False, TransferServiceType.GLACIER, "", None
         if upload_total_size_in_bytes == -1:
             self.cancel_upload("User Interrupt", vault, upload_id)
             if self.cancel_uuid:
                 self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
             self.glacier_client = None
-            return False, "", "", None
+            return False, TransferServiceType.GLACIER, "", None
         # Finish the upload
         try:
             archive_id, checksum = self.__finish_upload(upload_id, vault, upload_total_size_in_bytes)
@@ -90,9 +91,9 @@ class TransferServiceGlacier(TransferBase):
             if self.cancel_uuid:
                 self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
             self.glacier_client = None
-            return False, "", "", None
+            return False, TransferServiceType.GLACIER, "", None
         self.glacier_client = None
-        return True, "glacier", file_name, { "dryrun": self.dryrun, "region": region, "vault": vault, "file_name": file_name,
+        return True, TransferServiceType.GLACIER, file_name, { "dryrun": self.dryrun, "region": region, "vault": vault, "file_name": file_name,
                         "archive_id": archive_id, "checksum": checksum,
                         "size_in_bytes": upload_total_size_in_bytes, "human_readable_size": bytes_to_human_readable_size(upload_total_size_in_bytes),
                         "upload_id": upload_id, "location": location }

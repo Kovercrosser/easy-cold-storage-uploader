@@ -1,10 +1,16 @@
 from tinydb import Query
 from tinydb.table import Document
+
 from dependency_injection.service import Service
+from enums.file_ending import FileEndingCompression, FileEndingEncryption, FileEndingFiletype
+from enums.transfer_service_ids import TransferServiceType
 from services.compression.compression_base import CompressionBase
-from services.compression.compression_service_bzip2 import CompressionServiceBzip2
-from services.compression.compression_service_lzma import CompressionServiceLzma
-from services.compression.compression_service_none import CompressionServiceNone
+from services.compression.compression_service_bzip2 import \
+    CompressionServiceBzip2
+from services.compression.compression_service_lzma import \
+    CompressionServiceLzma
+from services.compression.compression_service_none import \
+    CompressionServiceNone
 from services.db_service import DbService
 from services.encryption.encryption_base import EncryptionBase
 from services.encryption.encryption_service_aes import EncryptionServiceAes
@@ -20,6 +26,7 @@ from services.transfer.transfer_service_glacier import TransferServiceGlacier
 from services.transfer.transfer_service_save import TransferServiceSave
 from utils.console_utils import print_error, print_success
 from utils.report_utils import ReportManager
+
 
 def _check_if_glacier_id(service: Service, download_id: str) -> bool:
     db_uploads_service: DbService = service.get_service("db_uploads_service")
@@ -48,36 +55,36 @@ def _get_archive_informations(service: Service, download_id: str) -> Document | 
 def _file_ending_service_mapping(service: Service, encryption_ending: str, compression_ending: str, filetype_ending: str, transfer_type: str, password: str, password_file: str, location: str, file_name: str) -> list[tuple[str, ServiceBase]]:
     mapped_services: list[tuple[str, ServiceBase]] =  []
     match compression_ending:
-        case ".bz2":
+        case FileEndingCompression.BZIP2.value:
             mapped_services.append(("compression_service", CompressionServiceBzip2()))
-        case ".xz":
+        case FileEndingCompression.LZMA.value:
             mapped_services.append(("compression_service", CompressionServiceLzma()))
-        case "":
+        case FileEndingCompression.NONE.value:
             mapped_services.append(("", CompressionServiceNone()))
         case _:
             raise ValueError("Compression not found.")
     match encryption_ending:
-        case ".aes":
+        case FileEndingEncryption.AES.value:
             mapped_services.append(("encryption_service", EncryptionServiceAes(password, password_file)))
-        case ".rsa":
+        case FileEndingEncryption.RSA.value:
             mapped_services.append(("encryption_service", EncryptionServiceRsa()))
-        case "":
+        case FileEndingEncryption.NONE.value:
             mapped_services.append(("none", EncryptionServiceNone()))
         case _:
             raise ValueError("Encryption not found.")
     match filetype_ending:
-        case ".tar":
+        case FileEndingFiletype.TAR.value:
             mapped_services.append(("filetype_service", FiletypeServiceTar()))
-        case ".zip":
+        case FileEndingFiletype.ZIP.value:
             mapped_services.append(("filetype_service", FiletypeServiceZip(compression_level=0, chunk_size=10*1024*1024)))
-        case "":
+        case FileEndingFiletype.NONE.value:
             mapped_services.append(("none", FiletypeServiceNone()))
         case _:
             raise ValueError("Filetype not found.")
     match transfer_type:
-        case "save":
+        case TransferServiceType.SAVE.value:
             mapped_services.append(("transfer_service", TransferServiceSave(service, location, file_name)))
-        case "glacier":
+        case TransferServiceType.GLACIER.value:
             mapped_services.append(("transfer_service", TransferServiceGlacier(service)))
         case _:
             raise ValueError("Transfer type not found.")

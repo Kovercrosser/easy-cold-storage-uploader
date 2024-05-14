@@ -41,7 +41,7 @@ def upload(service: Service, profile: str, paths: list[str]) -> int:
     status_report_manager.stop_reporting()
 
     db_information = {
-        "type": upload_service,
+        "type": upload_service.value,
         "upload_datetime_utc":  str(datetime.datetime.now(datetime.UTC)),
         "encryption": encryption_service.get_extension(),
         "compression": compression_service.get_extension(),

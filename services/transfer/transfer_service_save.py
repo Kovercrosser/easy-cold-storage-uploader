@@ -5,6 +5,7 @@ from typing import Any, Generator
 from tinydb.table import Document
 
 from dependency_injection.service import Service
+from enums.transfer_service_ids import TransferServiceType
 from services.transfer.transfer_base import TransferBase
 from utils.console_utils import print_error, print_success
 from utils.data_utils import bytes_to_human_readable_size
@@ -21,7 +22,7 @@ class TransferServiceSave(TransferBase):
         self.location = location
         super().__init__()
 
-    def upload(self, data: Generator[bytes,None,None], report_manager: ReportManager) -> tuple[bool, str, str, Any]:
+    def upload(self, data: Generator[bytes,None,None], report_manager: ReportManager) -> tuple[bool, TransferServiceType, str, Any]:
         self.file_name:str = os.path.join(self.location, self.file_name + self.get_file_extension(self.service))
         size:int = 0
         report_uuid = uuid.uuid4()
@@ -37,10 +38,10 @@ class TransferServiceSave(TransferBase):
         except (FileExistsError, FileNotFoundError) as exception:
             report_manager.add_report(Reporting("packer", report_uuid, "failed"))
             print_error(f"An error occurred while writing to {self.file_name}. {exception}")
-            return False, "", "", None
+            return False, TransferServiceType.SAVE, "", None
         report_manager.add_report(Reporting("transferer", report_uuid, "finished", "size: " + bytes_to_human_readable_size(size)))
         print_success(f"Upload complete. {bytes_to_human_readable_size(size)} written to {self.file_name}")
-        return True, "save", self.file_name,  {"file_name": self.file_name, "size": size, "location": os.getcwd()}
+        return True, TransferServiceType.SAVE, self.file_name,  {"file_name": self.file_name, "size": size, "location": os.getcwd()}
 
     def download(self, data_information: Document, report_manager: ReportManager) -> Generator[bytes,None,None]:
         report_uuid = uuid.uuid4()
