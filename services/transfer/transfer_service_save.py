@@ -2,16 +2,28 @@ import os
 import uuid
 from typing import Any, Generator
 
-from tinydb.table import Document
-
+from datatypes.transfer_services import TransferInformation, TransferServiceType
 from dependency_injection.service import Service
-from enums.transfer_service_ids import TransferServiceType
 from services.transfer.transfer_base import TransferBase
 from utils.console_utils import print_error, print_success
 from utils.data_utils import bytes_to_human_readable_size
 from utils.report_utils import Reporting, ReportManager
 
-
+class SaveInformation(TransferInformation):
+    file_name: str
+    size: int
+    location: str
+    def __init__(self, file_name:str, size:int, location:str) -> None:
+        self.file_name = file_name
+        self.size = size
+        self.location = location
+        super().__init__(file_name, TransferServiceType.SAVE)
+    def as_dict(self) -> dict[str, Any]:
+        d = super().as_dict()
+        d["file_name"] = self.file_name
+        d["size"] = self.size
+        d["location"] = self.location
+        return d
 class TransferServiceSave(TransferBase):
     service: Service
     file_name: str
@@ -22,7 +34,7 @@ class TransferServiceSave(TransferBase):
         self.location = location
         super().__init__()
 
-    def upload(self, data: Generator[bytes,None,None], report_manager: ReportManager) -> tuple[bool, TransferServiceType, str, Any]:
+    def upload(self, data: Generator[bytes,None,None], report_manager: ReportManager) -> tuple[bool, TransferInformation | None]:
         self.file_name:str = os.path.join(self.location, self.file_name + self.get_file_extension(self.service))
         size:int = 0
         report_uuid = uuid.uuid4()
@@ -38,16 +50,19 @@ class TransferServiceSave(TransferBase):
         except (FileExistsError, FileNotFoundError) as exception:
             report_manager.add_report(Reporting("packer", report_uuid, "failed"))
             print_error(f"An error occurred while writing to {self.file_name}. {exception}")
-            return False, TransferServiceType.SAVE, "", None
+            return False, None
         report_manager.add_report(Reporting("transferer", report_uuid, "finished", "size: " + bytes_to_human_readable_size(size)))
         print_success(f"Upload complete. {bytes_to_human_readable_size(size)} written to {self.file_name}")
-        return True, TransferServiceType.SAVE, self.file_name,  {"file_name": self.file_name, "size": size, "location": os.getcwd()}
+        info = SaveInformation(self.file_name, size, os.getcwd())
+        info.file_name = self.file_name
+        return True, info
 
-    def download(self, data_information: Document, report_manager: ReportManager) -> Generator[bytes,None,None]:
+    def download(self, data_information: TransferInformation, report_manager: ReportManager) -> Generator[bytes,None,None]:
         report_uuid = uuid.uuid4()
         report_manager.add_report(Reporting("transferer", report_uuid, "waiting"))
-        file_name = data_information["information"]["file_name"]
-        location = data_information["information"]["location"]
+        assert isinstance(data_information, SaveInformation)
+        file_name = data_information.file_name
+        location = data_information.location
         assert isinstance(file_name, str)
         assert isinstance(location, str)
         assert os.path.isdir(location)

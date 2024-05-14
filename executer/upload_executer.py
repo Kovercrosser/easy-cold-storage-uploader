@@ -1,4 +1,11 @@
+import base64
 import datetime
+import json
+import pickle
+import time
+from typing import Any
+import dill
+from datatypes.transfer_services import TransferInformation
 from dependency_injection.service import Service
 from services.compression.compression_base import CompressionBase
 from services.db_service import DbService
@@ -10,6 +17,30 @@ from utils.report_utils import ReportManager
 from utils.storage_utils import get_all_files_from_directories_and_files
 from utils.console_utils import console, print_error
 
+
+class UploadDbEntry:
+    upload_datetime_utc: str
+    encryption: str
+    compression: str
+    filetype: str
+    information: TransferInformation
+    def __init__(self, upload_datetime_utc:str, encryption:str, compression:str, filetype:str, information:TransferInformation):
+        self.upload_datetime_utc = upload_datetime_utc
+        self.encryption = encryption
+        self.compression = compression
+        self.filetype = filetype
+        self.information = information
+        super().__init__()
+
+    def as_dict(self) -> dict[str, Any]:
+        d = {
+            "upload_datetime_utc":  self.upload_datetime_utc,
+            "encryption": self.encryption,
+            "compression": self.compression,
+            "filetype": self.filetype,
+            "information": self.information.as_dict()
+        }
+        return d
 
 def upload(service: Service, profile: str, paths: list[str]) -> int:
     setting_service: SettingService = service.get_service("setting_service")
@@ -36,19 +67,20 @@ def upload(service: Service, profile: str, paths: list[str]) -> int:
     packed_generator = filetype_service.pack(files, status_report_manager)
     compressed_generator = compression_service.compress(packed_generator, status_report_manager)
     encrypted_generator = encryption_service.encrypt(compressed_generator, status_report_manager)
-    upload_status, upload_service, file_name, upload_information = transfer_service.upload(encrypted_generator,status_report_manager)
+    upload_status, upload_information = transfer_service.upload(encrypted_generator,status_report_manager)
 
     status_report_manager.stop_reporting()
 
-    db_information = {
-        "type": upload_service.value,
-        "upload_datetime_utc":  str(datetime.datetime.now(datetime.UTC)),
-        "encryption": encryption_service.get_extension(),
-        "compression": compression_service.get_extension(),
-        "filetype": filetype_service.get_extension(),
-        "filename": file_name,
-        "information": upload_information}
+
     if upload_status:
-        db_uploads_service.get_context().insert(db_information)
+        assert upload_information is not None
+        db_information = UploadDbEntry(
+            upload_datetime_utc = str(datetime.datetime.now(datetime.UTC)),
+            encryption = encryption_service.get_extension(),
+            compression = compression_service.get_extension(),
+            filetype = filetype_service.get_extension(),
+            information = upload_information
+        )
+        db_uploads_service.get_context().insert(db_information.as_dict())
         return 0
     return 1

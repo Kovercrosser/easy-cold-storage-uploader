@@ -8,10 +8,8 @@ from io import BufferedRandom
 from typing import Any, Generator, Tuple, Union
 
 import boto3
-from tinydb.table import Document
-
+from datatypes.transfer_services import TransferInformation, TransferServiceType
 from dependency_injection.service import Service
-from enums.transfer_service_ids import TransferServiceType
 from services.cancel_service import CancelService
 from services.setting_service import SettingService
 from services.transfer.transfer_base import TransferBase
@@ -21,6 +19,30 @@ from utils.data_utils import (CreateSplittedFilesFromGenerator,
 from utils.hash_utils import compute_sha256_tree_hash_for_aws
 from utils.report_utils import Reporting, ReportManager
 
+class GlacierInformation(TransferInformation):
+    def __init__(self, dryrun: bool, region: str, vault: str, file_name: str, archive_id: str, checksum: str, size_in_bytes: int, human_readable_size: str, upload_id: str, location: str) -> None:
+        self.dryrun: bool = dryrun
+        self.region: str = region
+        self.vault: str =  vault
+        self.archive_id: str = archive_id
+        self.checksum: str = checksum
+        self.size_in_bytes: int = size_in_bytes
+        self.human_readable_size: str =  human_readable_size
+        self.upload_id: str = upload_id
+        self.location: str = location
+        super().__init__(file_name, TransferServiceType.GLACIER)
+    def as_dict(self) -> dict[str, Any]:
+        d = super().as_dict()
+        d["dryrun"] = self.dryrun
+        d["region"] = self.region
+        d["vault"] = self.vault
+        d["archive_id"] = self.archive_id
+        d["checksum"] = self.checksum
+        d["size_in_bytes"] = self.size_in_bytes
+        d["human_readable_size"] = self.human_readable_size
+        d["upload_id"] = self.upload_id
+        d["location"] = self.location
+        return d
 
 class TransferServiceGlacier(TransferBase):
     service: Service
@@ -51,7 +73,7 @@ class TransferServiceGlacier(TransferBase):
             self.hashes.append(hashlib.sha256(data).digest())
         file.seek(0)
 
-    def upload(self, data: Generator[bytes,None,None], report_manager: ReportManager) -> tuple[bool, TransferServiceType, str, Any]:
+    def upload(self, data: Generator[bytes,None,None], report_manager: ReportManager) -> tuple[bool, TransferInformation | None]:
         self.setting_service = self.service.get_service("setting_service")
         region:str | None = self.setting_service.read_settings("default", "region")
         vault:str | None = self.setting_service.read_settings("default", "vault")
@@ -75,13 +97,13 @@ class TransferServiceGlacier(TransferBase):
             if self.cancel_uuid:
                 self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
             self.glacier_client = None
-            return False, TransferServiceType.GLACIER, "", None
+            return False, None
         if upload_total_size_in_bytes == -1:
             self.cancel_upload("User Interrupt", vault, upload_id)
             if self.cancel_uuid:
                 self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
             self.glacier_client = None
-            return False, TransferServiceType.GLACIER, "", None
+            return False, None
         # Finish the upload
         try:
             archive_id, checksum = self.__finish_upload(upload_id, vault, upload_total_size_in_bytes)
@@ -91,12 +113,21 @@ class TransferServiceGlacier(TransferBase):
             if self.cancel_uuid:
                 self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
             self.glacier_client = None
-            return False, TransferServiceType.GLACIER, "", None
+            return False, None
         self.glacier_client = None
-        return True, TransferServiceType.GLACIER, file_name, { "dryrun": self.dryrun, "region": region, "vault": vault, "file_name": file_name,
-                        "archive_id": archive_id, "checksum": checksum,
-                        "size_in_bytes": upload_total_size_in_bytes, "human_readable_size": bytes_to_human_readable_size(upload_total_size_in_bytes),
-                        "upload_id": upload_id, "location": location }
+        info = GlacierInformation(
+            dryrun=self.dryrun,
+            region=region,
+            vault=vault,
+            file_name=file_name,
+            archive_id=archive_id,
+            checksum=checksum,
+            size_in_bytes=upload_total_size_in_bytes,
+            human_readable_size=bytes_to_human_readable_size(upload_total_size_in_bytes),
+            upload_id=upload_id,
+            location=location
+        )
+        return True, info
 
     def __finish_upload(self, upload_id: str, vault: str, upload_total_size_in_bytes: int) -> tuple[str, str]:
         checksum = compute_sha256_tree_hash_for_aws(self.hashes)
@@ -244,5 +275,5 @@ class TransferServiceGlacier(TransferBase):
                     self.glacier_client.abort_multipart_upload(vaultName=vault, uploadId=upload_id)
                     print_warning(f"Uploaded Parts removed on remote because of {reason}")
 
-    def download(self, data_information: Document, report_manager: ReportManager) -> Generator[bytes,None,None]:
+    def download(self, data_information: TransferInformation, report_manager: ReportManager) -> Generator[bytes,None,None]:
         raise NotImplementedError("Downloading files isnt currently supported.")

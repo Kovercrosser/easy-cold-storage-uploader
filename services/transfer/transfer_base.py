@@ -1,9 +1,8 @@
 from abc import abstractmethod
-from typing import Any, Generator
-from tinydb.table import Document
+from typing import Generator
 
+from datatypes.transfer_services import TransferInformation
 from dependency_injection.service import Service
-from enums.transfer_service_ids import TransferServiceType
 from services.compression.compression_base import CompressionBase
 from services.encryption.encryption_base import EncryptionBase
 from services.filetype.filetype_base import FiletypeBase
@@ -20,7 +19,7 @@ class TransferBase(ServiceBase):
         return filetype_service.get_extension() + compression_service.get_extension() + encryption_service.get_extension()
 
     @abstractmethod
-    def upload(self, data: Generator[bytes,None,None], report_manager: ReportManager) -> tuple[bool, TransferServiceType, str, Any]:
+    def upload(self, data: Generator[bytes,None,None], report_manager: ReportManager) -> tuple[bool, TransferInformation | None]:
         '''
         upload_reporting is a queue that will be used to send information about the upload
         The information will be a dictionary with the following keys:
@@ -30,5 +29,5 @@ class TransferBase(ServiceBase):
         '''
 
     @abstractmethod
-    def download(self, data_information: Document, report_manager: ReportManager) -> Generator[bytes,None,None]:
+    def download(self, data_information: TransferInformation, report_manager: ReportManager) -> Generator[bytes,None,None]:
         pass
