@@ -10,7 +10,7 @@ from services.cancel_service import CancelService
 from services.db_service import DbService
 from services.setting_service import SettingService
 from utils.console_utils import (console, handle_console_exit, print_error)
-from cmd_parser import argument_parser
+from utils.cmd_parser import argument_parser
 
 service = Service()
 service.set_service(DbService("settings.json"), "settings_db_service")
