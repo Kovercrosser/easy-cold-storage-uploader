@@ -1,4 +1,3 @@
-from tabnanny import check
 from typing import Any
 from tinydb import Query
 from tinydb.table import Document
@@ -6,7 +5,6 @@ from tinydb.table import Document
 from datatypes.file_ending import FileEndingCompression, FileEndingEncryption, FileEndingFiletype
 from datatypes.transfer_services import TransferInformation, TransferServiceType
 from dependency_injection.service import Service
-from distutils.command import upload
 from services.compression.compression_base import CompressionBase
 from services.compression.compression_service_bzip2 import \
     CompressionServiceBzip2
