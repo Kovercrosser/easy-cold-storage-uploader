@@ -1,10 +1,5 @@
-import base64
 import datetime
-import json
-import pickle
-import time
 from typing import Any
-import dill
 from datatypes.transfer_services import TransferInformation
 from dependency_injection.service import Service
 from services.compression.compression_base import CompressionBase
