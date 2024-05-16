@@ -11,6 +11,7 @@ import boto3
 from datatypes.transfer_services import TransferInformation, TransferServiceType
 from dependency_injection.service import Service
 from services.cancel_service import CancelService
+from services.service_base import ServiceBase
 from services.setting_service import SettingService
 from services.transfer.transfer_base import TransferBase
 from utils.console_utils import console, print_error, print_warning
@@ -44,7 +45,7 @@ class GlacierInformation(TransferInformation):
         d["location"] = self.location
         return d
 
-class TransferServiceGlacier(TransferBase):
+class TransferServiceGlacier(TransferBase, ServiceBase):
     service: Service
     upload_size: int
     dryrun: bool

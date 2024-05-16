@@ -4,6 +4,7 @@ from typing import Any, Generator
 
 from datatypes.transfer_services import TransferInformation, TransferServiceType
 from dependency_injection.service import Service
+from services.service_base import ServiceBase
 from services.transfer.transfer_base import TransferBase
 from utils.console_utils import print_error, print_success
 from utils.data_utils import bytes_to_human_readable_size
@@ -24,7 +25,7 @@ class SaveInformation(TransferInformation):
         d["size"] = self.size
         d["location"] = self.location
         return d
-class TransferServiceSave(TransferBase):
+class TransferServiceSave(TransferBase, ServiceBase):
     service: Service
     file_name: str
     location: str

@@ -1,8 +1,10 @@
 import os
 from tinydb import TinyDB
 
+from services.service_base import ServiceBase
 
-class DbService:
+
+class DbService(ServiceBase):
     db: TinyDB
     def __init__(self, db_name: str) -> None:
         if not db_name.endswith(".json"):

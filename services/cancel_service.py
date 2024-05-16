@@ -2,8 +2,10 @@
 from typing import Any, Callable, Dict, List, Optional, Union
 import uuid
 
+from services.service_base import ServiceBase
 
-class CancelService:
+
+class CancelService(ServiceBase):
     subscriptions: List[Dict[str, Union[Callable[..., None], uuid.UUID, Optional[Any], tuple[Any, ...]]]] = []
 
     def subscribe_to_cancel_event(self, cancel_callback: Callable[..., None], *args: Any, self_reference: Optional[Any] = None) -> uuid.UUID:

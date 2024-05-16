@@ -1,8 +1,9 @@
 from tinydb import TinyDB, where
 from dependency_injection.service import Service
 from services.db_service import DbService
+from services.service_base import ServiceBase
 
-class SettingService:
+class SettingService(ServiceBase):
     db: TinyDB
     def __init__(self, service: Service) -> None:
         db_service: DbService = service.get_service("settings_db_service")

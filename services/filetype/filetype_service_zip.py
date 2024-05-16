@@ -9,7 +9,7 @@ from utils.console_utils import print_warning
 from utils.report_utils import ReportManager, Reporting
 
 
-class FiletypeServiceZip(FiletypeBase):
+class FiletypeServiceZip(FiletypeBase, ServiceBase):
 
     compression_level:int
     chunk_size:int
