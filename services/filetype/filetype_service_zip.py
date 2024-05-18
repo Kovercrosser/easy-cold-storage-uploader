@@ -5,6 +5,7 @@ from datetime import datetime
 import uuid
 from stream_zip import stream_zip, ZIP_64, zlib # type: ignore
 from services.filetype.filetype_base import FiletypeBase
+from services.service_base import ServiceBase
 from utils.console_utils import print_warning
 from utils.report_utils import ReportManager, Reporting
 
