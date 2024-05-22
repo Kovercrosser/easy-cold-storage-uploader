@@ -1,5 +1,6 @@
 import datetime
 import multiprocessing as mp
+import threading
 import time
 import uuid
 from threading import Event
@@ -31,27 +32,28 @@ class ReportManager():
     printer_process: mp.Process
     cancel_service: CancelService
     cancel_uuid: uuid.UUID
+    lock: threading.Lock
 
     def __init__(self, service: Service) -> None:
         self.printer_process = mp.Process(target=self.__report_printer, args=(self.reports,))
         self.printer_process.start()
         self.cancel_service: CancelService = service.get_service("cancel_service")
         self.cancel_uuid = self.cancel_service.subscribe_to_cancel_event(self.stop_reporting, self_reference=self)
+        self.lock = threading.Lock()
 
     def __del__(self) -> None:
         self.stop_reporting()
 
     def add_report(self, report: Reporting) -> None:
-        self.reports.put(report)
+        with self.lock:
+            self.reports.put(report)
 
     def stop_reporting(self, reason: str = "") -> None:
         console.print(f"Stopping reporting: {reason}")
-        self.reports.put("stop")
+        with self.lock:
+            self.reports.put("stop")
         self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
         self.printer_process.join()
-
-    def get_queue_directly(self) -> "mp.Queue[Reporting | Literal['stop']]":
-        return self.reports
 
     def __get_queue_element_if_exists(self, queue: "mp.Queue[Reporting | Literal['stop']]") -> Reporting | Literal['stop'] | None:
         if queue.qsize() == 0:
@@ -67,7 +69,7 @@ class ReportManager():
                     break
                 if report is None:
                     try:
-                        time.sleep(0.1)
+                        time.sleep(0.032)
                     except KeyboardInterrupt:
                         break
                     continue

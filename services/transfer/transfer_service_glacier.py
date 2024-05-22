@@ -14,7 +14,7 @@ from services.cancel_service import CancelService
 from services.service_base import ServiceBase
 from services.setting_service import SettingService
 from services.transfer.transfer_base import TransferBase
-from utils.console_utils import console, print_error, print_warning
+from utils.console_utils import console, print_error, print_success, print_warning
 from utils.data_utils import (CreateSplittedFilesFromGenerator,
                               bytes_to_human_readable_size, get_file_size)
 from utils.hash_utils import compute_sha256_tree_hash_for_aws
@@ -107,7 +107,7 @@ class TransferServiceGlacier(TransferBase, ServiceBase):
             return False, None
         # Finish the upload
         try:
-            archive_id, checksum = self.__finish_upload(upload_id, vault, upload_total_size_in_bytes)
+            archive_id, checksum = self.__finish_upload(upload_id, vault, upload_total_size_in_bytes, report_manager)
         except Exception:
             print_error("Error during finishing the upload")
             self.cancel_upload("Error during finishing the upload", vault, upload_id)
@@ -130,7 +130,7 @@ class TransferServiceGlacier(TransferBase, ServiceBase):
         )
         return True, info
 
-    def __finish_upload(self, upload_id: str, vault: str, upload_total_size_in_bytes: int) -> tuple[str, str]:
+    def __finish_upload(self, upload_id: str, vault: str, upload_total_size_in_bytes: int, report_manager: ReportManager) -> tuple[str, str]:
         checksum = compute_sha256_tree_hash_for_aws(self.hashes)
         self.hashes = []
         if checksum == "" or checksum is None:
@@ -143,19 +143,21 @@ class TransferServiceGlacier(TransferBase, ServiceBase):
         else:
             if self.cancel_uuid:
                 self.cancel_service.unsubscribe_from_cancel_event(self.cancel_uuid)
-            with console.status("[bold green]Finishing up..."):
-                if self.glacier_client:
-                    complete_status = self.glacier_client.complete_multipart_upload(
-                        vaultName=vault,
-                        uploadId=upload_id,
-                        archiveSize=str(upload_total_size_in_bytes),
-                        checksum=checksum
-                    )
-                else:
-                    raise Exception("Internal Error: Glacier client is not set")
+            uuid_finish_up = uuid.uuid4()
+            report_manager.add_report(Reporting("transferer", uuid_finish_up, "working", "Finishing up..."))
+            if self.glacier_client:
+                complete_status = self.glacier_client.complete_multipart_upload(
+                    vaultName=vault,
+                    uploadId=upload_id,
+                    archiveSize=str(upload_total_size_in_bytes),
+                    checksum=checksum
+                )
+                report_manager.add_report(Reporting("transferer", uuid_finish_up, "finished", "Finishing up..."))
+            else:
+                raise Exception("Internal Error: Glacier client is not set")
         archive_id = complete_status['archiveId']
         assert archive_id is not None and isinstance(archive_id, str)
-        console.print(f"Archive ID: [bold green]{archive_id}")
+        print_success(f"Finished Uploading. Archive ID: [bold purple]{archive_id}")
         return archive_id, checksum
 
     def __init_upload(self, file_name:str, vault:str, region:str) -> Tuple[str, str]:
@@ -179,11 +181,10 @@ class TransferServiceGlacier(TransferBase, ServiceBase):
 
     def __upload_consumer(self, queue: "mp.Queue[dict[str, Union[str, int, bytes]]]", upload_id: str, vault: str, upload_reporting: ReportManager) -> None:
         report_uuid = uuid.uuid4()
-        report_queue = upload_reporting.get_queue_directly()
-        report_queue.put(Reporting("transferer", report_uuid, "waiting"))
+        upload_reporting.add_report(Reporting("transferer", report_uuid, "waiting"))
         while True:
             if queue.empty():
-                report_queue.put(Reporting("transferer", report_uuid, "waiting"))
+                upload_reporting.add_report(Reporting("transferer", report_uuid, "waiting"))
                 try:
                     time.sleep(1)
                 except KeyboardInterrupt:
@@ -195,11 +196,11 @@ class TransferServiceGlacier(TransferBase, ServiceBase):
                 continue
             if data["range"] == "finish":
                 queue.put({"range": "finish", "part": 0, "data": b""}) # add it again to the queue to notify the other consumers
-                report_queue.put(Reporting("transferer", report_uuid, "finished", "uploading parts"))
+                upload_reporting.add_report(Reporting("transferer", report_uuid, "finished"))
                 break
             if not isinstance(data, dict) or not isinstance(data["data"], bytes) or not isinstance(data["range"], str) or not isinstance(data["part"], int):
                 continue
-            report_queue.put(Reporting("transferer", report_uuid, "working", f"uploading Part {str(data["part"] + 1)}"))
+            upload_reporting.add_report(Reporting("transferer", report_uuid, "working", f"uploading Part {str(data["part"] + 1)}"))
             try:
                 if self.glacier_client:
                     self.glacier_client.upload_multipart_part(

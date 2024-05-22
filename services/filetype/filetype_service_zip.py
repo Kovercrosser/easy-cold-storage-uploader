@@ -29,12 +29,14 @@ class FiletypeServiceZip(FiletypeBase, ServiceBase):
         report_uuid = uuid.uuid4()
         upload_reporting.add_report(Reporting("packer", report_uuid, "waiting"))
         def read_file(fi: str) -> Generator[bytes, None, None]:
-            upload_reporting.add_report(Reporting("packer", report_uuid, "working", "file: " + os.path.basename(fi)))
             with open(fi, 'rb') as f:
                 while True:
+                    upload_reporting.add_report(Reporting("packer", report_uuid, "working", "file: " + os.path.basename(fi)))
                     data = f.read(self.chunk_size)
                     if not data:
+                        upload_reporting.add_report(Reporting("packer", report_uuid, "waiting"))
                         return
+                    upload_reporting.add_report(Reporting("packer", report_uuid, "waiting"))
                     yield data
         for file in files:
             modified_at:datetime
@@ -49,12 +51,18 @@ class FiletypeServiceZip(FiletypeBase, ServiceBase):
             member_files.append(
                 (file, modified_at, mode, ZIP_64, read_file(file)) # pylint: disable=consider-using-with
             )
-
-        zipped_chunks:Generator[bytes, None, None] = stream_zip(
-            files=member_files, chunk_size=self.chunk_size,
-            get_compressobj=lambda: zlib.compressobj(wbits=-zlib.MAX_WBITS, level=self.compression_level)
+        def yield_packing() -> Generator[bytes, None, None]:
+            zipped_chunks:Generator[bytes, None, None] = stream_zip(
+                files=member_files, chunk_size=self.chunk_size,
+                get_compressobj=lambda: zlib.compressobj(wbits=-zlib.MAX_WBITS, level=self.compression_level)
             )
-        return zipped_chunks
+            return zipped_chunks
+        while True:
+            chunk = next(yield_packing())
+            if len(chunk) == 0:
+                upload_reporting.add_report(Reporting("packer", report_uuid, "finished"))
+                raise StopIteration
+
 
 
     def unpack(self, data: Generator[bytes,None,None], save_location:str, filename:str, upload_reporting: ReportManager) -> None:
