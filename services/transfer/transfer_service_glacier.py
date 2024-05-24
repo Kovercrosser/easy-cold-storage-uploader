@@ -165,8 +165,7 @@ class TransferServiceGlacier(TransferBase, ServiceBase):
                 archiveDescription=f'{file_name}',
                 partSize=str(self.upload_size)
             )
-
-        cancel_uuid = cancel_service.subscribe_to_cancel_event(self.cancel_upload, glacier_client, vault, creation_response['uploadId'], self_reference=self)
+        cancel_uuid = cancel_service.subscribe_to_cancel_event(self.cancel_upload, glacier_client=glacier_client, vault=vault, upload_id=str(creation_response['uploadId']))
         return creation_response['uploadId'] , creation_response['location'], cancel_uuid
 
     def __upload_consumer(self, queue: "mp.Queue[dict[str, Union[str, int, bytes]]]", upload_id: str, vault: str, upload_reporting: ReportManager, glacier_client: botocore.client.BaseClient) -> None:

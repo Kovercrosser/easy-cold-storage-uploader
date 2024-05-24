@@ -1,35 +1,38 @@
 
-from typing import Any, Callable, Dict, List, Optional, Union
+import inspect
 import uuid
+from typing import Any, Callable, Dict, List, Tuple
 
 from services.service_base import ServiceBase
+from utils.console_utils import print_error
 
+
+def check_parameter(func, param_name):
+    try:
+        signature = inspect.signature(func)
+        return param_name in signature.parameters
+    except ValueError:
+        return False
 
 class CancelService(ServiceBase):
-    subscriptions: List[Dict[str, Union[Callable[..., None], uuid.UUID, Optional[Any], tuple[Any, ...]]]] = []
+    CallbackType = Callable[..., Any]
+    subscriptions: List[Tuple[uuid.UUID, CallbackType, Dict]] = []
 
-    def subscribe_to_cancel_event(self, cancel_callback: Callable[..., None], *args: Any, self_reference: Optional[Any] = None) -> uuid.UUID:
+    def subscribe_to_cancel_event(self, cancel_callback: CallbackType, **kwargs: Any) -> uuid.UUID:
         map_uuid = uuid.uuid4()
-        self.subscriptions.append({ "callback": cancel_callback, "uuid": map_uuid, "self_reference": self_reference, "args": args})
+        self.subscriptions.append((map_uuid, cancel_callback, kwargs))
         return map_uuid
 
     def unsubscribe_from_cancel_event(self, map_uuid: uuid.UUID) -> None:
-        self.subscriptions = [x for x in self.subscriptions if x["uuid"] != map_uuid]
+        self.subscriptions = [x for x in self.subscriptions if x[0] != map_uuid]
 
     def cancel(self, reason: str) -> None:
         for subscription in self.subscriptions:
-            fun = subscription["callback"]
-            if not callable(fun):
-                continue
-            if fun is None:
-                continue
-            self_reference = subscription["self_reference"]
-            args = subscription["args"]
-            if self_reference is not None:
-                if args and isinstance(args, tuple):
-                    fun(self_reference, reason, *args)
-                fun(self_reference, reason)
-            if args and isinstance(args, tuple):
-                fun(reason, *args)
-            fun(reason)
+            try:
+                if check_parameter(subscription[1], "reason") and "reason" not in subscription[2]:
+                    subscription[1](reason=reason, **subscription[2])
+                else:
+                    subscription[1](**subscription[2])
+            except Exception as e:
+                print_error(f"Error in cancel callback: {e}\n\nwhen calling: {subscription}")
         self.subscriptions = []
