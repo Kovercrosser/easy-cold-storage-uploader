@@ -57,11 +57,9 @@ class FiletypeServiceZip(FiletypeBase, ServiceBase):
                 get_compressobj=lambda: zlib.compressobj(wbits=-zlib.MAX_WBITS, level=self.compression_level)
             )
             return zipped_chunks
-        while True:
-            chunk = next(yield_packing())
-            if len(chunk) == 0:
-                upload_reporting.add_report(Reporting("packer", report_uuid, "finished"))
-                raise StopIteration
+        for chunk in yield_packing():
+            yield chunk
+        upload_reporting.add_report(Reporting("packer", report_uuid, "finished"))
 
 
 

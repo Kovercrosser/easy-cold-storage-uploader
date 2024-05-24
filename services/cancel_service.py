@@ -17,18 +17,19 @@ class CancelService(ServiceBase):
         self.subscriptions = [x for x in self.subscriptions if x["uuid"] != map_uuid]
 
     def cancel(self, reason: str) -> None:
-        for callback in self.subscriptions:
-            fun = callback["callback"]
+        for subscription in self.subscriptions:
+            fun = subscription["callback"]
             if not callable(fun):
                 continue
             if fun is None:
                 continue
-            self_reference = callback["self_reference"]
-            if self_reference and callable(self_reference):
-                if callback["args"] and isinstance(callback["args"], tuple):
-                    fun(self_reference, reason, *callback["args"])
+            self_reference = subscription["self_reference"]
+            args = subscription["args"]
+            if self_reference is not None:
+                if args and isinstance(args, tuple):
+                    fun(self_reference, reason, *args)
                 fun(self_reference, reason)
-            if callback["args"] and isinstance(callback["args"], tuple):
-                fun(reason, *callback["args"])
+            if args and isinstance(args, tuple):
+                fun(reason, *args)
             fun(reason)
         self.subscriptions = []

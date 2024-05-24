@@ -38,7 +38,7 @@ class ReportManager():
         self.printer_process = mp.Process(target=self.__report_printer, args=(self.reports,))
         self.printer_process.start()
         self.cancel_service: CancelService = service.get_service("cancel_service")
-        self.cancel_uuid = self.cancel_service.subscribe_to_cancel_event(self.stop_reporting, self_reference=self)
+        self.cancel_uuid = self.cancel_service.subscribe_to_cancel_event(self.stop_reporting)
         self.lock = threading.Lock()
 
     def __del__(self) -> None:
