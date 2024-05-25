@@ -166,5 +166,5 @@ def download(service: Service, profile: str, location:str, download_id:str, pass
 
     status_report_manager.stop_reporting()
 
-    print_success(f"[bold green]Download completed. {transfer_information} written to {location}")
+    print_success(f"[bold green]Download completed. {transfer_information.file_name} written to '{location}'.")
     return 0

@@ -8,6 +8,8 @@ from io import BufferedRandom
 from typing import Any, Generator, Tuple, Union
 import boto3
 import botocore.client
+import botocore.response
+import botocore.exceptions
 from datatypes.transfer_services import TransferInformation, TransferServiceType
 from dependency_injection.service import Service
 from services.cancel_service import CancelService
@@ -256,11 +258,100 @@ class TransferServiceGlacier(TransferBase, ServiceBase):
                 print_warning(f"Uploaded Parts removed on remote because of {reason}")
 
     def download(self, data_information: TransferInformation, report_manager: ReportManager) -> Generator[bytes,None,None]:
-        setting_service = self.service.get_service("setting_service")
-        region:str | None = setting_service.read_settings("default", "region")
-        vault:str | None = setting_service.read_settings("default", "vault")
-        if None in [region, vault]:
-            raise Exception("Region or Vault is not set")
-        glacier_client = boto3.client("glacier", region_name=region)
-        cancel_service = self.service.get_service("cancel_service")
-        raise NotImplementedError("Downloading files isnt currently supported.")
+        assert isinstance(data_information, GlacierInformation)
+        glacier_client = boto3.client("glacier", region_name=data_information.region)
+
+        job_id = self.check_existing_download_job(glacier_client, data_information)
+        if job_id == "":
+            job_id = self.__init_download(data_information, report_manager, glacier_client)
+
+        if not self.__waiting_for_download(job_id, data_information, report_manager, glacier_client):
+            print_error("Download failed")
+            raise Exception("Download failed")
+
+        return self.__download_file(data_information, report_manager, job_id, glacier_client)
+
+    def check_existing_download_job(self, glacier_client: botocore.client.BaseClient, data_information: GlacierInformation) -> str:
+        try:
+            response = glacier_client.list_jobs(vaultName=data_information.vault) # type: ignore
+            for job in response.get('JobList', []):
+                if job['Action'] == 'ArchiveRetrieval' and job['ArchiveId'] == data_information.archive_id:
+                    return job['JobId']
+            return ""
+        except botocore.exceptions.ClientError as error:
+            print_error(f"Error while checking for existing jobs: {error}")
+            return ""
+
+    def __init_download(self, data_information: GlacierInformation, report_manager: ReportManager, glacier_client: botocore.client.BaseClient) -> str:
+        initiate_job_uuid = uuid.uuid4()
+        report_manager.add_report(Reporting("transferer", initiate_job_uuid, "working", "Creating download job..."))
+
+        sns = boto3.client('sns', region_name=data_information.region)
+        response = sns.create_topic(Name='ECSUGlacierJobNotifications') # TODO: can multiple topics with the same name exist?
+        topic_arn:str = response['TopicArn']
+        assert hasattr(glacier_client, 'initiate_job')
+        response = glacier_client.initiate_job( # type: ignore
+            vaultName=data_information.vault,
+            jobParameters={
+                'Type': 'archive-retrieval',
+                'ArchiveId': data_information.archive_id,
+                'Description': 'Download Job started by easy_cold_strorage_uploader',
+                'SNSTopic': topic_arn,
+                'Tier': 'Standard', # TODO: is this the best option? Maybe make this configurable
+            }
+        )
+        report_manager.add_report(Reporting("transferer", initiate_job_uuid, "finished", "Creating download job"))
+        return response["jobId"]
+
+    def __waiting_for_download(self, job_id: str, data_information: GlacierInformation, report_manager: ReportManager, glacier_client: botocore.client.BaseClient) -> bool:
+        waiting_for_job_uuid = uuid.uuid4()
+        report_manager.add_report(Reporting("transferer", waiting_for_job_uuid, "waiting", "Glacier retrieval job. This can take up to 24 hours."))
+        assert hasattr(glacier_client, 'describe_job')
+        while True:
+            response = glacier_client.describe_job( # type: ignore
+                vaultName=data_information.vault,
+                jobId=job_id
+            )
+            status = response['StatusCode']
+            if status == 'Succeeded':
+                report_manager.add_report(Reporting("transferer", waiting_for_job_uuid, "finished", "Glacier retrieval job"))
+                return True
+            if status == 'Failed':
+                report_manager.add_report(Reporting("transferer", waiting_for_job_uuid, "failed", "Glacier retrieval job"))
+                return False
+            time.sleep(300) # Waiting for 5 minutes
+
+
+    def __download_file(self, data_information: GlacierInformation, report_manager: ReportManager, job_id:str, glacier_client: botocore.client.BaseClient) -> Generator[bytes, Any, Any]:
+        download_uuid = uuid.uuid4()
+        report_manager.add_report(Reporting("transferer", download_uuid, "working", "Downloading"))
+        def download_reporter(number_of_bytes: int) -> None:
+            report_manager.add_report(
+                Reporting(
+                    "transferer",
+                    download_uuid,
+                    "working",
+                    f"Downloading {bytes_to_human_readable_size(number_of_bytes)} of {data_information.human_readable_size}."
+                    f"{number_of_bytes / data_information.size_in_bytes * 100:.2f}% done."
+                )
+            )
+        hashes: list[bytes] = []
+
+        def download_part(start:int, end:int) -> botocore.response.StreamingBody:
+            byte_range = f"bytes={start}-{end}"
+            response = glacier_client.get_job_output( # type: ignore
+                vaultName=data_information.vault,
+                jobId=job_id,
+                range=byte_range
+            )
+            download_reporter(end)
+            hashes.append(str.encode(response['checksum']))
+            return response['body']
+
+        download_size = 1024*1024*20
+        last_part_end: int = -1
+        assert hasattr(glacier_client, 'get_job_output')
+        for end in range(download_size, data_information.size_in_bytes, download_size):
+            yield download_part(last_part_end + 1, end).read()
+        if data_information.size_in_bytes % download_size != 0:
+            yield download_part(last_part_end + 1, data_information.size_in_bytes - 1).read()

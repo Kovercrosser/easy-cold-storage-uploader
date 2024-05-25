@@ -69,7 +69,7 @@ class ReportManager():
                     break
                 if report is None:
                     try:
-                        time.sleep(0.032)
+                        time.sleep(1)
                     except KeyboardInterrupt:
                         break
                     continue
