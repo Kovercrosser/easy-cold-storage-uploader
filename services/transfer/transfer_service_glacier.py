@@ -305,7 +305,7 @@ class TransferServiceGlacier(TransferBase, ServiceBase):
 
     def __waiting_for_download(self, job_id: str, data_information: GlacierInformation, report_manager: ReportManager, glacier_client: botocore.client.BaseClient) -> bool:
         waiting_for_job_uuid = uuid.uuid4()
-        report_manager.add_report(Reporting("transferer", waiting_for_job_uuid, "waiting", "Glacier retrieval job. This can take up to 24 hours."))
+        report_manager.add_report(Reporting("transferer", waiting_for_job_uuid, "waiting", "Glacier retrieval job. This can take up to 12 hours. You can close the programm and start it later with the same arguments to continue the download."))
         assert hasattr(glacier_client, 'describe_job')
         while True:
             response = glacier_client.describe_job( # type: ignore
