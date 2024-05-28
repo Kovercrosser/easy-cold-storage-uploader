@@ -107,8 +107,7 @@ class TransferServiceGlacier(TransferBase, ServiceBase):
         try:
             archive_id, checksum = self.__finish_upload(upload_id, vault, upload_total_size_in_bytes, report_manager, cancel_service, cancel_uuid, glacier_client)
         except Exception:
-            print_error("Error during finishing the upload")
-            self.cancel_upload("Error during finishing the upload", glacier_client, vault, upload_id)
+            self.cancel_upload("Couldnt finish the upload", glacier_client, vault, upload_id)
             cancel_service.unsubscribe_from_cancel_event(cancel_uuid)
             return False, None
         info = GlacierInformation(
@@ -355,3 +354,4 @@ class TransferServiceGlacier(TransferBase, ServiceBase):
             yield download_part(last_part_end + 1, end).read()
         if data_information.size_in_bytes % download_size != 0:
             yield download_part(last_part_end + 1, data_information.size_in_bytes - 1).read()
+        # TODO: check if the hashes are correct

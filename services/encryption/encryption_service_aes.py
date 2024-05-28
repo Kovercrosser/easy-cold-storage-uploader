@@ -15,7 +15,7 @@ class EncryptionServiceAes(EncryptionBase, ServiceBase):
         salt = b'\xa4nTc\x1f\xab\x94\xa1\xefEH\tv\x97G\xe0'
         if password == "" and password_file == "":
             raise ValueError("Password or passwordfile is required for AES encryption")
-        if password_file != "":
+        if password_file != "" and password_file is not None:
             if os.path.isfile(password_file) is False:
                 print_error("Password file does not exist")
                 raise ValueError("Password file does not exist")
@@ -24,7 +24,6 @@ class EncryptionServiceAes(EncryptionBase, ServiceBase):
                 if password == "":
                     print_error("Password file is empty")
                     raise ValueError("Password file is empty")
-                print(password)
                 if " " in password:
                     print_error("Password file contains spaces")
                     raise ValueError("Password file contains spaces")
